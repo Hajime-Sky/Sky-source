@@ -1,0 +1,121 @@
+{
+  "name": "SkyReminderModules",
+  "mainScript": "Sky_星の子リマインダー_v2.17_originalsin_impl2_dynfix18.js",
+  "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
+  "generatedAt": "2026-04-21T21:03:13+09:00",
+  "update": {
+    "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
+    "enabled": true,
+    "hashAlgorithm": "sha256",
+    "policySetting": "settings.githubUpdate.policy",
+    "defaultPolicy": "daily",
+    "note": "The loader can check this raw GitHub manifest before local execution. Publish this folder under SkyReminderModules without deleting unrelated repository files."
+  },
+  "parts": [
+    {
+      "file": "001_constants_and_navigation.js",
+      "role": "Constants, action ids, navigation definitions, drawing defaults, and small shared helpers.",
+      "sourceLines": "4-229",
+      "sha256": "692a8548e41a7e12f3f03d48ba8d60204475b03618b70634b25a99d0a68909da",
+      "url": ""
+    },
+    {
+      "file": "002_settings_store_and_cache.js",
+      "role": "Notification id helpers, default settings, normalization, keychain store, cache, and settings persistence.",
+      "sourceLines": "230-936",
+      "sha256": "6c080c69b96da7600f36ef721d272e7fa4cbfcffdcab7ca734c53a0459304a2a",
+      "url": ""
+    },
+    {
+      "file": "003a_policy_time_and_common.js",
+      "role": "Architecture policy, time helpers, common scheduling helpers, and update-time schedules.",
+      "sourceLines": "937-1278",
+      "sha256": "66ca13adf7a7b630c96ad49ad0b4fbf4d3665a2a4b8e14b4c8660584d4591b12",
+      "url": ""
+    },
+    {
+      "file": "003b_recurring_events_and_pan.js",
+      "role": "Recurring event collectors, pan/forest advance logic, and completion markers.",
+      "sourceLines": "1279-1657",
+      "sha256": "c9cacb3a092fd9470cb80cfc90b2567c6dd15785dbea97ff53fb60ff7fabe4f3",
+      "url": ""
+    },
+    {
+      "file": "003c_original_sin_and_dye.js",
+      "role": "Original Sin completion, idle-window candidate generation, and dye schedules.",
+      "sourceLines": "1658-1896",
+      "sha256": "5995cedb50450c69962499374406dda8fdc2d2e6150d261bb971965dc45f1e4f",
+      "url": ""
+    },
+    {
+      "file": "003d_event_registry.js",
+      "role": "Provider registry and UI field definitions for event types.",
+      "sourceLines": "1897-2150",
+      "sha256": "844036dd32cbc671364ace1d835fd12f33cda8586b02695d0edf2e2c2d5b4abc",
+      "url": ""
+    },
+    {
+      "file": "003e_scheduler_state.js",
+      "role": "Settings change planning, schedule cache keys, run-state merge, and notification scheduling.",
+      "sourceLines": "2151-2479",
+      "sha256": "e59fbf7e5ba166a0ebafd3a1c9a390b4f6c02bb0ff8c38597f938be989afd3ec",
+      "url": ""
+    },
+    {
+      "file": "004a_tap_and_shard_data.js",
+      "role": "Tap handling, shard calculations, and signal source data.",
+      "sourceLines": "2457-3061",
+      "sha256": "a289d4957ee4fc425ba6b430bf5afd184ad427395fa671e97fa620fac0d11e9e",
+      "url": ""
+    },
+    {
+      "file": "004b_signal_rendering.js",
+      "role": "Short and long signal canvas rendering.",
+      "sourceLines": "3062-3180",
+      "sha256": "f0299b93ac499d7943d36e0810dae8cb6d538d809fd198ded3177484c88bc04a",
+      "url": ""
+    },
+    {
+      "file": "004c_draw_modes.js",
+      "role": "Clock, list, timeline, and bar canvas drawing modes.",
+      "sourceLines": "3181-3768",
+      "sha256": "40ac05e73aba999d68435a6d77c98fd6c9f9b94a8d28388b7200347de2e5e0f4",
+      "url": ""
+    },
+    {
+      "file": "004d_widget_layout.js",
+      "role": "Widget layout resolution, image generation dispatch, and preview card HTML.",
+      "sourceLines": "3769-3928",
+      "sha256": "df57a8b9da39393447a738a6760a04d0e1aed6f72057d3e7acddecab1118f063",
+      "url": ""
+    },
+    {
+      "file": "005_app_ui_html_and_client.js",
+      "role": "Interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.",
+      "sourceLines": "3923-8349",
+      "sha256": "75e871b1bb612280f511648b993d6d9fca5f2174da0a2431678a86b85587a082",
+      "url": ""
+    },
+    {
+      "file": "006_app_actions_backup_and_handlers.js",
+      "role": "WebView command handlers, settings export/import, backup file handling, and app-side mutation sync.",
+      "sourceLines": "8350-9153",
+      "sha256": "a36163569049c63b0f42997c29d6ae13970051be788266c80f07d9bdf816f4ab",
+      "url": ""
+    },
+    {
+      "file": "008_github_update_scaffold.js",
+      "role": "GitHub update metadata and manifest-diff planning helpers.",
+      "sourceLines": "new",
+      "sha256": "b2fcf581fdf37739f8395cfa26a3c52d02e8648bf08bca55cf0c1a334e495bc8",
+      "url": ""
+    },
+    {
+      "file": "007_shortcut_entrypoint.js",
+      "role": "Shortcut/query handling, startup checks, runtime mode dispatch, and Script.complete().",
+      "sourceLines": "9154-9417",
+      "sha256": "926f9f8958d68de6c4b51168866dbb15635b381bf272cdb10ec03d841859a2a9",
+      "url": ""
+    }
+  ]
+}

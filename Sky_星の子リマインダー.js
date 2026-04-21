@@ -7,6 +7,7 @@ const SKY_REMINDER_MODULE_DIR = "SkyReminderModules";
 const SKY_REMINDER_MANIFEST = "manifest.json";
 const SKY_REMINDER_SETTINGS_KEY = "SKY_SHARDS_SETTINGS";
 const SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json";
+const SKY_REMINDER_MAIN_SCRIPT = "Sky_星の子リマインダー.js";
 const SKY_REMINDER_FALLBACK_PARTS = [
   "001_constants_and_navigation.js",
   "002_settings_store_and_cache.js",
@@ -97,6 +98,13 @@ function skyReminderResolvePartUrl(remoteManifestUrl, part) {
   return base + file;
 }
 
+function skyReminderResolveMainScriptUrl(remoteManifestUrl, remoteManifest) {
+  const meta = remoteManifest && remoteManifest.mainScriptFile && typeof remoteManifest.mainScriptFile === "object" ? remoteManifest.mainScriptFile : {};
+  const explicit = String(meta.url || "").trim();
+  if (/^https?:\/\//i.test(explicit)) return explicit;
+  return String(remoteManifestUrl || "").replace(/SkyReminderModules\/[^/]*$/, encodeURIComponent(SKY_REMINDER_MAIN_SCRIPT));
+}
+
 async function skyReminderFetchJson(url) {
   const req = new Request(url);
   req.timeoutInterval = 20;
@@ -132,15 +140,21 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest)
       const local = localByFile[file] || null;
       return !fm.fileExists(path) || String(local?.sha256 || "") !== String(p.sha256 || "");
     });
-    if (changed.length > 0) {
+    const mainMeta = remoteManifest.mainScriptFile && typeof remoteManifest.mainScriptFile === "object" ? remoteManifest.mainScriptFile : null;
+    const mainHashChanged = mainMeta && String(mainMeta.sha256 || "") && String(localManifest?.mainScriptFile?.sha256 || "") !== String(mainMeta.sha256 || "");
+    if (changed.length > 0 || mainHashChanged) {
       if (!fm.fileExists(moduleDir)) fm.createDirectory(moduleDir, true);
       for (const part of changed) {
         const file = String(part.file);
         const text = await skyReminderFetchText(skyReminderResolvePartUrl(cfg.remoteManifestUrl, part));
         fm.writeString(fm.joinPath(moduleDir, file), text);
       }
+      if (mainHashChanged) {
+        const text = await skyReminderFetchText(skyReminderResolveMainScriptUrl(cfg.remoteManifestUrl, remoteManifest));
+        fm.writeString(fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_MAIN_SCRIPT), text);
+      }
       fm.writeString(fm.joinPath(moduleDir, SKY_REMINDER_MANIFEST), JSON.stringify(remoteManifest, null, 2));
-      skyReminderSaveSettingsPatch({ lastCheckedAtMs: nowMs, lastUpdatedAtMs: nowMs, lastUpdateStatus: `updated:${changed.length}` });
+      skyReminderSaveSettingsPatch({ lastCheckedAtMs: nowMs, lastUpdatedAtMs: nowMs, lastUpdateStatus: `updated:parts=${changed.length},main=${mainHashChanged ? 1 : 0}` });
       return remoteManifest;
     }
     skyReminderSaveSettingsPatch({ lastCheckedAtMs: nowMs, lastUpdateStatus: "no-update" });

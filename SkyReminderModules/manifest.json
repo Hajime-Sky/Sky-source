@@ -1,6 +1,11 @@
 {
   "name": "SkyReminderModules",
-  "mainScript": "Sky_星の子リマインダー_v2.17_originalsin_impl2_dynfix18.js",
+  "mainScript": "Sky_星の子リマインダー.js",
+  "mainScriptFile": {
+    "file": "Sky_星の子リマインダー.js",
+    "sha256": "c691543b6bc4e5815a3f6c6e2f99930de489eeac302c90c12ae398d461331e58",
+    "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
+  },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
   "generatedAt": "2026-04-21T21:03:13+09:00",
   "update": {

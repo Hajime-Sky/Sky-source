@@ -17,9 +17,18 @@ const UPDATE_STATE_KEY = "sky_treasure_candles_update_state";
 const CACHE_META_FILE = "image_cache_meta.json";
 const AUTOMATION_WARN_STATE_FILE = "automation_warn_state.json";
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const ROTATION_CORRECTIONS = Object.freeze({
-  "2026-04-15": { realm: "waste", rotation: 3, source: "Sky Wiki search snapshot, April 15 Sky Time: Golden Wasteland Rotation 3" },
-  "2026-04-18": { realm: "forest", rotation: 2, source: "Sky Wiki, updated April 18 2026 UTC: Hidden Forest Rotation 2" }
+const UPDATE_POLICIES = Object.freeze(["none", "daily", "always"]);
+const TREASURE_CANDLE_CYCLE = Object.freeze({
+  anchorSkyDate: "2025-08-21",
+  realmById: Object.freeze(["forest", "valley", "waste", "vault", "prairie"]),
+  rotationOrder: Object.freeze({
+    prairie: Object.freeze([1, 3, 2]),
+    forest: Object.freeze([2, 3, 1]),
+    valley: Object.freeze([1, 2]),
+    waste: Object.freeze([1, 2, 3]),
+    vault: Object.freeze([1, 2])
+  }),
+  source: "Sky Wiki Treasure Candles calculator, anchor 2025-08-21 PDT"
 });
 const REALMS = [
   { key: "prairie", jp: "草原", en: "Daylight Prairie" },
@@ -312,6 +321,14 @@ function formatOffset(minutes) {
   const mm = abs % 60;
   return `UTC${sign}${pad2(hh)}:${pad2(mm)}`;
 }
+function parseYMDToUtcDate(ymd) {
+  const parts = String(ymd || "").split("-").map(n => Number(n));
+  if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) return null;
+  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 0, 0, 0));
+}
+function daysBetweenUtcDates(a, b) {
+  return Math.floor((a.getTime() - b.getTime()) / 86400000);
+}
 function getServerWallClockDate(dateObj = new Date()) {
   const la = getCurrentLATimeParts(dateObj);
   return new Date(Date.UTC(la.year, la.month - 1, la.day, 0, 0, 0));
@@ -326,14 +343,16 @@ function getCurrentSkyContext(dateObj = new Date()) {
   };
 }
 function calcByServerDate(serverDate, targetSkyYMD) {
-  const realmIndex = mod((Math.floor((serverDate.getTime() / 86400000) - 18569.625)), REALMS.length);
+  const anchorDate = parseYMDToUtcDate(TREASURE_CANDLE_CYCLE.anchorSkyDate);
+  const dayDiff = anchorDate ? daysBetweenUtcDates(serverDate, anchorDate) : 0;
+  const cycleRealmKey = TREASURE_CANDLE_CYCLE.realmById[mod(dayDiff, TREASURE_CANDLE_CYCLE.realmById.length)];
+  const realmIndex = Math.max(0, REALMS.findIndex(r => r.key === cycleRealmKey));
   const realm = REALMS[realmIndex];
   const patterns = PATTERN_DATA[realm.key].patterns;
-  const correction = ROTATION_CORRECTIONS[String(targetSkyYMD || "")] || null;
-  let rotIndex = mod(Math.floor((serverDate.getUTCDate() - 1) / 5), patterns.length);
-  if (correction && correction.realm === realm.key && Number(correction.rotation) > 0) {
-    rotIndex = mod(Number(correction.rotation) - 1, patterns.length);
-  }
+  const selector = mod(Math.ceil(serverDate.getUTCDate() / 5) - 1, patterns.length);
+  const rotationOrder = TREASURE_CANDLE_CYCLE.rotationOrder[realm.key] || [];
+  const rotationNumber = Number(rotationOrder[selector] || (selector + 1));
+  const rotIndex = mod(rotationNumber - 1, patterns.length);
   const pattern = patterns[rotIndex];
   return {
     skyYMD: targetSkyYMD,
@@ -342,7 +361,13 @@ function calcByServerDate(serverDate, targetSkyYMD) {
     rotIndex,
     pattern,
     patternMeta: PATTERN_DATA[realm.key],
-    correction
+    cycle: {
+      source: TREASURE_CANDLE_CYCLE.source,
+      anchorSkyDate: TREASURE_CANDLE_CYCLE.anchorSkyDate,
+      dayDiff,
+      selector,
+      rotationNumber
+    }
   };
 }
 function calcForCurrentLATime(dateObj = new Date()) {
@@ -408,6 +433,34 @@ function writeJsonFile(name, value) {
   const fm = getICloudFileManager();
   fm.writeString(getDataPath(name, fm), JSON.stringify(value || {}, null, 2));
 }
+function readUpdateState() {
+  const state = readJsonFile(UPDATE_STATE_KEY + ".json", {});
+  const policy = UPDATE_POLICIES.includes(String(state?.policy || "")) ? String(state.policy) : "daily";
+  return {
+    ...(state || {}),
+    policy,
+    lastCheckedAtMs: Math.max(0, Number(state?.lastCheckedAtMs || 0) || 0),
+    lastUpdatedAtMs: Math.max(0, Number(state?.lastUpdatedAtMs || 0) || 0),
+    lastStatus: String(state?.lastStatus || "")
+  };
+}
+function writeUpdateStatePatch(patch) {
+  writeJsonFile(UPDATE_STATE_KEY + ".json", { ...readUpdateState(), ...(patch || {}) });
+}
+function setUpdatePolicy(policy) {
+  const normalized = UPDATE_POLICIES.includes(String(policy || "")) ? String(policy) : "daily";
+  writeUpdateStatePatch({ policy: normalized });
+  return normalized;
+}
+function formatLocalDateTimeFromMs(ms) {
+  const n = Number(ms || 0) || 0;
+  if (!n) return "未実行";
+  try {
+    return new Date(n).toLocaleString("ja-JP");
+  } catch (_) {
+    return "未実行";
+  }
+}
 function readAppliedMigrationIds() {
   const raw = readJsonFile(MIGRATION_STATE_KEY + ".json", { applied: [] });
   if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
@@ -467,9 +520,10 @@ function runStorageMigrations() {
 }
 async function updateScriptFromGitHubIfNeeded(force = false) {
   if (config.runsInWidget && !force) return false;
-  const state = readJsonFile(UPDATE_STATE_KEY + ".json", {});
+  const state = readUpdateState();
   const nowMs = Date.now();
-  if (!force && state.lastCheckedAtMs && nowMs - Number(state.lastCheckedAtMs) < UPDATE_CHECK_INTERVAL_MS) return false;
+  if (!force && state.policy === "none") return false;
+  if (!force && state.policy === "daily" && state.lastCheckedAtMs && nowMs - Number(state.lastCheckedAtMs) < UPDATE_CHECK_INTERVAL_MS) return false;
   const nextState = { ...(state || {}), lastCheckedAtMs: nowMs };
   try {
     const req = new Request(REMOTE_SCRIPT_URL);
@@ -634,7 +688,7 @@ function buildTextOutput(res, cacheMeta) {
   lines.push(`今日の画像: ${res.pattern.label}`);
   lines.push(`地方: ${res.realm.jp} (${res.realm.en})`);
   lines.push(`Rotation: ${res.rotIndex + 1}/${res.patternMeta.patterns.length}`);
-  if (res.correction && res.correction.source) lines.push(`補正: ${res.correction.source}`);
+  if (res.cycle && res.cycle.source) lines.push(`サイクル: ${res.cycle.source}`);
   lines.push("");
   lines.push(`見分け方: ${res.patternMeta.identifyDetailed}`);
   lines.push("");
@@ -809,15 +863,19 @@ async function showSimpleAlert(title, message) {
 }
 function buildAppSummary(res, cacheMeta) {
   const lines = [];
+  const updateState = readUpdateState();
+  const policyLabel = updateState.policy === "none" ? "更新しない" : updateState.policy === "always" ? "毎回" : "24時間";
   lines.push(`今日の画像: ${res.pattern.label}`);
   lines.push(`地方: ${res.realm.jp}`);
   lines.push(`Sky日付: ${res.skyYMD}`);
-  if (res.correction && res.correction.source) lines.push("直近データ補正あり");
+  lines.push(`Rotation: ${res.rotIndex + 1}/${res.patternMeta.patterns.length}`);
   lines.push(`基準LA時刻: ${res.laNow}`);
   lines.push(`保存画像数: ${getSavedImageCount()}/${getExpectedLabels().length}`);
   if (cacheMeta && cacheMeta.updatedAt) lines.push(`最終更新: ${cacheMeta.updatedAt}`);
   if (cacheMeta) lines.push(`品質状態: ${needsQualityRefresh(cacheMeta) ? "再取得推奨" : "最新1280px想定"}`);
   if (cacheMeta && cacheMeta.lastError) lines.push(`前回エラー: ${cacheMeta.lastError}`);
+  lines.push(`GitHub更新: ${policyLabel} / ${updateState.lastStatus || "未実行"}`);
+  lines.push(`最終確認: ${formatLocalDateTimeFromMs(updateState.lastCheckedAtMs)}`);
   return lines.join("\n");
 }
 async function previewTodayText() {
@@ -866,6 +924,47 @@ async function resetCacheAndReport() {
   const res = calcForCurrentLATime();
   await showSimpleAlert("キャッシュを削除しました", buildAppSummary(res, null));
 }
+function restartThisScript() {
+  try {
+    Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(SCRIPT_NAME));
+  } catch (e) {
+    console.warn(`Could not restart treasure candle script: ${e}`);
+  }
+}
+async function showUpdatePolicySettings() {
+  const state = readUpdateState();
+  const alert = new Alert();
+  alert.title = "GitHub更新設定";
+  alert.message = [
+    "更新タイミングを選択してください。",
+    "",
+    `現在: ${state.policy === "none" ? "更新しない" : state.policy === "always" ? "毎回" : "24時間"}`,
+    `最終確認: ${formatLocalDateTimeFromMs(state.lastCheckedAtMs)}`,
+    `状態: ${state.lastStatus || "未実行"}`
+  ].join("\n");
+  alert.addAction("24時間");
+  alert.addAction("毎回");
+  alert.addAction("更新しない");
+  alert.addCancelAction("戻る");
+  const index = await alert.presentSheet();
+  if (index === -1) return;
+  const policy = index === 0 ? "daily" : index === 1 ? "always" : "none";
+  setUpdatePolicy(policy);
+  await showSimpleAlert("保存しました", `GitHub更新タイミングを「${index === 0 ? "24時間" : index === 1 ? "毎回" : "更新しない"}」にしました。`);
+}
+async function runManualUpdateAndMaybeRestart() {
+  const before = readUpdateState();
+  const updated = await updateScriptFromGitHubIfNeeded(true);
+  const after = readUpdateState();
+  if (updated || Number(after.lastUpdatedAtMs || 0) > Number(before.lastUpdatedAtMs || 0)) {
+    await showSimpleAlert("更新しました", "GitHubから新しいスクリプトを保存しました。スクリプトを再起動します。");
+    restartThisScript();
+    Script.complete();
+    return true;
+  }
+  await showSimpleAlert("更新はありません", `GitHubを確認しましたが、新しいスクリプトはありませんでした。\n\n状態: ${after.lastStatus || "no-update"}`);
+  return false;
+}
 async function presentApp() {
   const initialMeta = readCacheMeta();
   if (!isCacheUsable(initialMeta) || needsQualityRefresh(initialMeta)) {
@@ -880,6 +979,8 @@ async function presentApp() {
     alert.addAction("今日の画像を表示");
     alert.addAction("説明テキストを表示");
     alert.addAction("画像を取得 / 再取得");
+    alert.addAction("GitHub更新設定");
+    alert.addAction("今すぐ更新");
     alert.addAction("データとキャッシュをリセット");
     alert.addCancelAction("終了");
     const index = await alert.presentSheet();
@@ -897,6 +998,15 @@ async function presentApp() {
       continue;
     }
     if (index === 3) {
+      await showUpdatePolicySettings();
+      continue;
+    }
+    if (index === 4) {
+      const restarted = await runManualUpdateAndMaybeRestart();
+      if (restarted) return;
+      continue;
+    }
+    if (index === 5) {
       await resetCacheAndReport();
       continue;
     }
@@ -904,10 +1014,10 @@ async function presentApp() {
 }
 runStorageMigrations();
 const didUpdateScript = await updateScriptFromGitHubIfNeeded(false);
-if (didUpdateScript && config.runsInApp) {
-  await showSimpleAlert("更新しました", "GitHub から新しいスクリプトを保存しました。Scriptable でこのスクリプトを開き直すと反映されます。");
-  Script.complete();
-} else if (config.runsInWidget) {
+if (didUpdateScript) {
+  console.log("GitHub update applied. It will take effect on the next run.");
+}
+if (config.runsInWidget) {
   const widget = await createWidget();
   Script.setWidget(widget);
   Script.complete();

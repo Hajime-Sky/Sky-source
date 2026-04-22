@@ -59,14 +59,19 @@ function drawSignalMode(now, theme) {
   const cx = W / 2, cy = H / 2;
   drawSignalBackgroundImage(ctx, (displayEvent && displayEvent.realm) ? displayEvent.realm : realmText, cx, cy, RAD, PAL);
 
-  const ringWidth = Math.max(1, LINE_WIDTH_BASE / 2);
-  const outerRad = RAD + ringWidth / 2;
-  const innerRad = RAD - ringWidth / 2;
-  const rDot = Math.max(1, DOT_RADIUS / 2);
-  const drawRing = (ringRatio, ringColor, rad) => {
-    ctx.setStrokeColor(PAL.signalTrack);
-    ctx.setLineWidth(ringWidth);
-    ctx.strokeEllipse(new Rect(cx - rad, cy - rad, rad * 2, rad * 2));
+  const ringWidth = LINE_WIDTH_BASE;
+  const ringRad = RAD;
+  const rDot = DOT_RADIUS;
+  const drawRing = (ringRatio, ringColor, options = {}) => {
+    const trackColor = options.trackColor || PAL.signalTrack;
+    const drawTrack = options.drawTrack !== false;
+    const drawDots = options.drawDots !== false;
+    const rad = options.rad || ringRad;
+    if (drawTrack) {
+      ctx.setStrokeColor(trackColor);
+      ctx.setLineWidth(ringWidth);
+      ctx.strokeEllipse(new Rect(cx - rad, cy - rad, rad * 2, rad * 2));
+    }
     if (ringRatio > 0) {
       const eRad = -Math.PI / 2; // 常に12時方向が終点
       const sRad = eRad - (Math.PI * 2 * ringRatio);
@@ -78,19 +83,35 @@ function drawSignalMode(now, theme) {
       ctx.setLineWidth(ringWidth);
       ctx.addPath(p);
       ctx.strokePath();
-      ctx.setFillColor(ringColor);
-      const ptStart = polarToPoint(cx, cy, rad, sRad);
-      const ptEnd = polarToPoint(cx, cy, rad, eRad);
-      ctx.fillEllipse(new Rect(ptStart.x - rDot, ptStart.y - rDot, rDot * 2, rDot * 2));
-      ctx.fillEllipse(new Rect(ptEnd.x - rDot, ptEnd.y - rDot, rDot * 2, rDot * 2));
+      if (drawDots) {
+        ctx.setFillColor(ringColor);
+        const ptStart = polarToPoint(cx, cy, rad, sRad);
+        const ptEnd = polarToPoint(cx, cy, rad, eRad);
+        ctx.fillEllipse(new Rect(ptStart.x - rDot, ptStart.y - rDot, rDot * 2, rDot * 2));
+        ctx.fillEllipse(new Rect(ptEnd.x - rDot, ptEnd.y - rDot, rDot * 2, rDot * 2));
+      }
     }
+  };
+  const drawInactiveLowerRing = (ringColor) => {
+    const inactiveColor = nextEvent && !activeEvent && (nextEvent.start - now) > SIGNAL_FILL_WINDOW_MS
+      ? C("#0a84ff", PAL.isDark ? 0.28 : 0.22)
+      : ringColor;
+    ctx.setStrokeColor(PAL.signalTrack);
+    ctx.setLineWidth(ringWidth);
+    ctx.strokeEllipse(new Rect(cx - ringRad, cy - ringRad, ringRad * 2, ringRad * 2));
+    ctx.setStrokeColor(inactiveColor);
+    ctx.strokeEllipse(new Rect(cx - ringRad, cy - ringRad, ringRad * 2, ringRad * 2));
   };
   const longLeftMs = (!activeEvent && nextEvent) ? Math.max(0, nextEvent.start - now) : 0;
   const longRatio = (longLeftMs <= 24 * MS_PER_HOUR && longLeftMs > SIGNAL_FILL_WINDOW_MS)
     ? Math.max(0, Math.min(1.0, (longLeftMs - SIGNAL_FILL_WINDOW_MS) / (20 * MS_PER_HOUR)))
     : 0;
-  drawRing(ratio, strokeColor, outerRad);
-  drawRing(longRatio, C("#bf5af2"), innerRad);
+  if (longRatio > 0) {
+    drawInactiveLowerRing(strokeColor);
+    drawRing(longRatio, C("#bf5af2"), { drawTrack: false });
+  } else {
+    drawRing(ratio, strokeColor);
+  }
 
   const textMain = PAL.isDark ? C("#ffffff") : C("#111111");
   const textSub  = PAL.isDark ? C("#f2f2f7") : C("#3c3c43");

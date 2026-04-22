@@ -3,7 +3,7 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "7d1ea59b14d1fa728ca38ee2654d362be8109c1f292813e3b305700ff0037570",
+    "sha256": "92bf4464a6638566fbf299b978059c2bae6a9106dee664cb9b722f0228d2e2c5",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
@@ -113,6 +113,13 @@
       "role": "GitHub update metadata and manifest-diff planning helpers.",
       "sourceLines": "new",
       "sha256": "5f7b1d222119250014c8fdaf789eeb1784efe3b0398f4456ef66916b6e856e15",
+      "url": ""
+    },
+    {
+      "file": "009_storage_migrations.js",
+      "role": "One-time storage migrations for legacy Keychain values and old file locations.",
+      "sourceLines": "new",
+      "sha256": "fa8202f45719bde3cae3bb5b27085f32f55032604455506d3cae6e586f2147f6",
       "url": ""
     },
     {

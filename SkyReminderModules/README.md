@@ -20,6 +20,7 @@ The Scriptable root file remains in its original location and acts only as a loa
 - `005_app_ui_html_and_client.js`: interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.
 - `006_app_actions_backup_and_handlers.js`: WebView command handlers, settings export/import, backup file handling, and app-side mutation sync.
 - `008_github_update_scaffold.js`: GitHub update metadata and manifest-diff planning helpers.
+- `009_storage_migrations.js`: one-time storage migrations for legacy Keychain values and old file locations.
 - `007_shortcut_entrypoint.js`: Shortcut/query handling, startup checks, runtime mode dispatch, and `Script.complete()`.
 
 ## GitHub update path

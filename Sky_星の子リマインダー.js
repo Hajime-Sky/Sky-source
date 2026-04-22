@@ -24,6 +24,7 @@ const SKY_REMINDER_FALLBACK_PARTS = [
   "005_app_ui_html_and_client.js",
   "006_app_actions_backup_and_handlers.js",
   "008_github_update_scaffold.js",
+  "009_storage_migrations.js",
   "007_shortcut_entrypoint.js",
 ];
 

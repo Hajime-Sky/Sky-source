@@ -2844,10 +2844,26 @@ function runGithubUpdateNow(el){
       if (el.dataset) {
         el.dataset.busy = '1';
         el.dataset.originalText = el.textContent || '今すぐ更新';
+        if (el.dataset.githubTimer) clearTimeout(Number(el.dataset.githubTimer));
       }
       el.textContent = '更新を確認中...';
       el.classList.add('is-busy');
       pulse(el, 'ok');
+      if (el.dataset) {
+        var timer = setTimeout(function(){
+          try{
+            if (el && el.dataset && el.dataset.busy === '1') {
+              el.dataset.busy = '';
+              el.dataset.githubTimer = '';
+              el.classList.remove('is-busy');
+              el.textContent = el.dataset.originalText || '今すぐ更新';
+              pulse(el, 'err');
+              toast('GitHub更新の応答がありませんでした');
+            }
+          }catch(_){}
+        }, 45000);
+        el.dataset.githubTimer = String(timer);
+      }
     }
     toast('GitHub更新を確認中...');
   }catch(e){}

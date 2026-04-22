@@ -413,14 +413,15 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest,
     if (localManifest && Array.isArray(localManifest.parts)) {
       for (const p of localManifest.parts) if (p && p.file) localByFile[String(p.file)] = p;
     }
-    const changed = missing ? remoteParts : remoteParts.filter((p) => {
+    const forceSyncAll = force === true;
+    const changed = forceSyncAll ? remoteParts : missing ? remoteParts : remoteParts.filter((p) => {
       const file = String(p.file);
       const path = fm.joinPath(moduleDir, file);
       const local = localByFile[file] || null;
       return !fm.fileExists(path) || String(local?.sha256 || "") !== String(p.sha256 || "");
     });
     const mainMeta = remoteManifest.mainScriptFile && typeof remoteManifest.mainScriptFile === "object" ? remoteManifest.mainScriptFile : null;
-    const mainHashChanged = mainMeta && String(mainMeta.sha256 || "") && String(localManifest?.mainScriptFile?.sha256 || "") !== String(mainMeta.sha256 || "");
+    const mainHashChanged = forceSyncAll ? !!mainMeta : mainMeta && String(mainMeta.sha256 || "") && String(localManifest?.mainScriptFile?.sha256 || "") !== String(mainMeta.sha256 || "");
     if (changed.length > 0 || mainHashChanged) {
       if (!fm.fileExists(moduleDir)) fm.createDirectory(moduleDir, true);
       for (const part of changed) {
@@ -433,7 +434,7 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest,
         fm.writeString(fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_MAIN_SCRIPT), text);
       }
       fm.writeString(fm.joinPath(moduleDir, SKY_REMINDER_MANIFEST), JSON.stringify(remoteManifest, null, 2));
-      skyReminderSaveSettingsPatch({ lastCheckedAtMs: nowMs, lastUpdatedAtMs: nowMs, lastUpdateStatus: `updated:parts=${changed.length},main=${mainHashChanged ? 1 : 0}` });
+      skyReminderSaveSettingsPatch({ lastCheckedAtMs: nowMs, lastUpdatedAtMs: nowMs, lastUpdateStatus: `${forceSyncAll ? "synced" : "updated"}:parts=${changed.length},main=${mainHashChanged ? 1 : 0}` });
       if (options && options.restartOnUpdated === true) skyReminderRestartScript();
       return remoteManifest;
     }

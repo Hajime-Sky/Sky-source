@@ -724,7 +724,28 @@ WEBVIEW_HANDLERS[WV_ACTION.GITHUB_UPDATE_NOW] = async (_r) => {
         var btns = document.querySelectorAll('[data-action="github-update-now"]');
         btns.forEach(function(b){
           b.textContent = ${JSON.stringify(String(text || "今すぐ更新"))};
-          if (b.dataset) b.dataset.busy = ${busy ? "'1'" : "''"};
+          if (b.dataset) {
+            if (b.dataset.githubTimer) {
+              clearTimeout(Number(b.dataset.githubTimer));
+              b.dataset.githubTimer = '';
+            }
+            b.dataset.busy = ${busy ? "'1'" : "''"};
+            if (${busy ? "true" : "false"}) {
+              var timer = setTimeout(function(){
+                try {
+                  if (b && b.dataset && b.dataset.busy === '1') {
+                    b.dataset.busy = '';
+                    b.dataset.githubTimer = '';
+                    b.classList.remove('is-busy');
+                    b.textContent = b.dataset.originalText || '今すぐ更新';
+                    pulse(b, 'err');
+                    toast('GitHub更新の応答がありませんでした');
+                  }
+                } catch (_) {}
+              }, 45000);
+              b.dataset.githubTimer = String(timer);
+            }
+          }
           if (${busy ? "true" : "false"}) b.classList.add('is-busy');
           else b.classList.remove('is-busy');
           pulse(b, ${JSON.stringify(kind)});
@@ -744,7 +765,10 @@ WEBVIEW_HANDLERS[WV_ACTION.GITHUB_UPDATE_NOW] = async (_r) => {
     await skyReminderManualGithubUpdateAndRestart();
     const after = loadSettings();
     const afterUpdatedAt = Number(after.githubUpdate && after.githubUpdate.lastUpdatedAtMs || 0) || 0;
+    const lastUpdateStatus = String(after.githubUpdate && after.githubUpdate.lastUpdateStatus || "");
+    if (lastUpdateStatus.indexOf("error:") === 0) throw new Error(lastUpdateStatus);
     if (afterUpdatedAt > beforeUpdatedAt) {
+      try { if (typeof CacheManager !== "undefined" && CacheManager.clearByPrefix) CacheManager.clearByPrefix("widget:"); } catch (_) {}
       setGithubUpdateButtonState("更新完了。再起動します...", true, "ok");
       notifySuccess("更新しました。スクリプトを再起動します", { refreshKeychain: true });
       await new Promise(resolve => Timer.schedule(0.45, false, resolve));

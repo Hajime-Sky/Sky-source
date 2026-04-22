@@ -60,9 +60,10 @@ const ITEM_SOURCES = Object.freeze({
   clock12: build12hWindows,
   default: getUpcomingFixedDays,
 });
+const WIDGET_DATA_CACHE_REV = "2026-04-22-shard-label-v3";
 function getWidgetDataCached(now, viewMode, need, settings) {
   const st = settings || loadSettings();
-  const cacheKey = `widget:${viewMode}:${need}`;
+  const cacheKey = `widget:${WIDGET_DATA_CACHE_REV}:${viewMode}:${need}`;
   const cached = CacheManager.getValidCache(st, cacheKey, now);
   if (cached) return cached;
   const src = ITEM_SOURCES[String(viewMode || "")] || ITEM_SOURCES.default;

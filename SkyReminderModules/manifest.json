@@ -7,7 +7,7 @@
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
-  "generatedAt": "2026-04-22T12:09:13.342Z",
+  "generatedAt": "2026-04-22T12:12:37.940Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -70,7 +70,7 @@
       "file": "004a_tap_and_shard_data.js",
       "role": "Tap handling, shard calculations, and signal source data.",
       "sourceLines": "2457-3061",
-      "sha256": "3aa89ac89c58fc75faa70aaba9f8d5fd377925ac4e237fff3578ba1990faf4f0",
+      "sha256": "97ddd8d643eb515ed7c8300fbdfbdd1582cba8fd0b2d89fa76a093a84acc96fe",
       "url": ""
     },
     {

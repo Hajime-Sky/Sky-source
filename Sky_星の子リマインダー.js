@@ -3,12 +3,15 @@
 // icon-color: yellow; icon-glyph: jedi;
 // Sky_星の子リマインダー v2.17 modular loader
 
-const SKY_REMINDER_MODULE_DIR = "SkyReminderModules";
+const SKY_REMINDER_APP_DIR = "SkyReminder";
+const SKY_REMINDER_MODULE_DIR = "modules";
+const SKY_REMINDER_LEGACY_MODULE_DIR = "SkyReminderModules";
 const SKY_REMINDER_MANIFEST = "manifest.json";
 const SKY_REMINDER_SETTINGS_KEY = "SKY_SHARDS_SETTINGS";
 const SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json";
 const SKY_REMINDER_MAIN_SCRIPT = "Sky_星の子リマインダー.js";
-const SKY_REMINDER_STORAGE_DIR = "SkyReminderData";
+const SKY_REMINDER_STORAGE_DIR = "SkyReminder/data";
+const SKY_REMINDER_LEGACY_STORAGE_DIR = "SkyReminderData";
 const SKY_REMINDER_MIGRATION_STATE_KEY = "SKY_STORAGE_MIGRATIONS";
 const SKY_REMINDER_KNOWN_MIGRATIONS = Object.freeze({
   "009_storage_migrations.js": "2026-04-22-unify-storage-v1",
@@ -46,16 +49,20 @@ async function skyReminderReadICloudText(fm, path) {
 function skyReminderReadSettings() {
   const readFromFile = () => {
     const fm = FileManager.iCloud();
-    const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+    const dirs = [SKY_REMINDER_STORAGE_DIR, SKY_REMINDER_LEGACY_STORAGE_DIR];
     const file = encodeURIComponent(SKY_REMINDER_SETTINGS_KEY).replace(/%/g, "_") + ".json";
-    const path = fm.joinPath(dir, file);
-    if (!fm.fileExists(path)) return null;
-    try {
-      if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
-        fm.downloadFileFromiCloud(path);
-      }
-    } catch (_) {}
-    return fm.readString(path);
+    for (const dirName of dirs) {
+      const dir = fm.joinPath(fm.documentsDirectory(), dirName);
+      const path = fm.joinPath(dir, file);
+      if (!fm.fileExists(path)) continue;
+      try {
+        if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
+          fm.downloadFileFromiCloud(path);
+        }
+      } catch (_) {}
+      return fm.readString(path);
+    }
+    return null;
   };
   try {
     let raw = readFromFile();
@@ -67,6 +74,17 @@ function skyReminderReadSettings() {
         if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
         const file = encodeURIComponent(SKY_REMINDER_SETTINGS_KEY).replace(/%/g, "_") + ".json";
         fm.writeString(fm.joinPath(dir, file), raw);
+      } catch (_) {}
+    } else if (raw !== null && raw !== undefined) {
+      try {
+        const fm = FileManager.iCloud();
+        const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+        const file = encodeURIComponent(SKY_REMINDER_SETTINGS_KEY).replace(/%/g, "_") + ".json";
+        const path = fm.joinPath(dir, file);
+        if (!fm.fileExists(path)) {
+          if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+          fm.writeString(path, raw);
+        }
       } catch (_) {}
     }
     if (raw === null || raw === undefined) return {};
@@ -98,20 +116,90 @@ function skyReminderStorageFilePath(fm, key) {
   return fm.joinPath(dir, file);
 }
 
+function skyReminderLegacyStorageFilePath(fm, key) {
+  const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_LEGACY_STORAGE_DIR);
+  const file = encodeURIComponent(String(key || "")).replace(/%/g, "_") + ".json";
+  return fm.joinPath(dir, file);
+}
+
 function skyReminderReadStorageRaw(key) {
   try {
     const fm = FileManager.iCloud();
-    const path = skyReminderStorageFilePath(fm, key);
-    if (!fm.fileExists(path)) return null;
-    try {
-      if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
-        fm.downloadFileFromiCloud(path);
-      }
-    } catch (_) {}
-    return fm.readString(path);
+    const paths = [skyReminderStorageFilePath(fm, key), skyReminderLegacyStorageFilePath(fm, key)];
+    for (const path of paths) {
+      if (!fm.fileExists(path)) continue;
+      try {
+        if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
+          fm.downloadFileFromiCloud(path);
+        }
+      } catch (_) {}
+      return fm.readString(path);
+    }
+    return null;
   } catch (_) {
     return null;
   }
+}
+
+function skyReminderAppDir(fm) {
+  const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_APP_DIR);
+  if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+  return dir;
+}
+
+function skyReminderModuleDir(fm) {
+  const dir = fm.joinPath(skyReminderAppDir(fm), SKY_REMINDER_MODULE_DIR);
+  if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+  return dir;
+}
+
+function skyReminderLegacyModuleDir(fm) {
+  return fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_LEGACY_MODULE_DIR);
+}
+
+async function skyReminderCopyLegacyManifestIfNeeded(fm, moduleDir) {
+  const manifestPath = fm.joinPath(moduleDir, SKY_REMINDER_MANIFEST);
+  if (fm.fileExists(manifestPath)) return;
+  const legacyDir = skyReminderLegacyModuleDir(fm);
+  const legacyManifestPath = fm.joinPath(legacyDir, SKY_REMINDER_MANIFEST);
+  if (!fm.fileExists(legacyManifestPath)) return;
+  try {
+    const text = await skyReminderReadICloudText(fm, legacyManifestPath);
+    fm.writeString(manifestPath, text);
+  } catch (_) {}
+}
+
+function skyReminderDeleteLegacyModuleDir(fm, activeModuleDir) {
+  try {
+    const legacyDir = skyReminderLegacyModuleDir(fm);
+    if (legacyDir !== activeModuleDir && fm.fileExists(legacyDir)) fm.remove(legacyDir);
+  } catch (e) {
+    console.warn(`Could not delete legacy module dir: ${e}`);
+  }
+}
+
+function skyReminderDeleteLegacyDataDirIfMigrated(fm) {
+  try {
+    const legacyDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_LEGACY_STORAGE_DIR);
+    const newDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+    if (legacyDir !== newDir && fm.fileExists(legacyDir) && fm.fileExists(newDir)) fm.remove(legacyDir);
+  } catch (e) {
+    console.warn(`Could not delete legacy data dir: ${e}`);
+  }
+}
+
+function skyReminderCleanupLegacyDirs(fm, moduleDir) {
+  skyReminderDeleteLegacyModuleDir(fm, moduleDir);
+  skyReminderDeleteLegacyDataDirIfMigrated(fm);
+}
+
+function skyReminderActiveModuleDir(fm) {
+  return skyReminderModuleDir(fm);
+}
+
+function skyReminderResolveLocalModuleDirForExistingInstall(fm) {
+  const moduleDir = skyReminderActiveModuleDir(fm);
+  return moduleDir;
 }
 
 function skyReminderWriteStorageRaw(key, value) {
@@ -173,10 +261,10 @@ function skyReminderManifestParts(manifest) {
 }
 
 function skyReminderManifestMigrations(manifest) {
-  const byFile = Object.create(null);
+  const byId = Object.create(null);
   const addMigration = (migration) => {
     if (!migration || !migration.id || !migration.file) return;
-    byFile[String(migration.file)] = migration;
+    byId[String(migration.id)] = migration;
   };
   if (manifest && Array.isArray(manifest.migrations)) {
     for (const migration of manifest.migrations) addMigration(migration);
@@ -188,7 +276,7 @@ function skyReminderManifestMigrations(manifest) {
       if (id) addMigration({ ...(typeof part === "object" && part ? part : {}), id, file });
     }
   }
-  return Object.values(byFile);
+  return Object.values(byId);
 }
 
 function skyReminderHasMissingFiles(fm, moduleDir, manifest) {
@@ -322,14 +410,16 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest,
 
 async function skyReminderManualGithubUpdateAndRestart() {
   const fm = FileManager.iCloud();
-  const moduleDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_MODULE_DIR);
+  const moduleDir = skyReminderResolveLocalModuleDirForExistingInstall(fm);
+  await skyReminderCopyLegacyManifestIfNeeded(fm, moduleDir);
   const localManifest = await skyReminderLoadManifest(fm, moduleDir);
   return await skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest, { force: true, restartOnUpdated: true });
 }
 
 async function skyReminderRunFromParts() {
   const fm = FileManager.iCloud();
-  const moduleDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_MODULE_DIR);
+  const moduleDir = skyReminderResolveLocalModuleDirForExistingInstall(fm);
+  await skyReminderCopyLegacyManifestIfNeeded(fm, moduleDir);
   let manifest = await skyReminderLoadManifest(fm, moduleDir);
   manifest = await skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, manifest);
   const parts = skyReminderManifestParts(manifest);
@@ -349,9 +439,12 @@ async function skyReminderRunFromParts() {
   }
   if (!insertedMigrations) chunks.push(...migrationChunks);
   skyReminderDeleteLocalMigrationFiles(fm, moduleDir, manifest);
+  skyReminderDeleteLegacyModuleDir(fm, moduleDir);
 
   const source = `(async () => {\n${chunks.join("\n")}\n})()`;
-  return await eval(source);
+  const result = await eval(source);
+  skyReminderDeleteLegacyDataDirIfMigrated(fm);
+  return result;
 }
 
 await skyReminderRunFromParts();

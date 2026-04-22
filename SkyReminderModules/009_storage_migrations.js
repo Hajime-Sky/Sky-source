@@ -56,6 +56,50 @@ function migrateLegacyConstellationImages() {
   return result;
 }
 
+function copyDirectoryContentsIfMissing(fm, srcDir, dstDir, result) {
+  if (!fm.fileExists(dstDir)) fm.createDirectory(dstDir, true);
+  const names = fm.listContents(srcDir);
+  for (const name of names) {
+    const src = fm.joinPath(srcDir, name);
+    const dst = fm.joinPath(dstDir, name);
+    if (fm.isDirectory && fm.isDirectory(src)) {
+      copyDirectoryContentsIfMissing(fm, src, dst, result);
+      continue;
+    }
+    if (fm.fileExists(dst)) {
+      result.skipped += 1;
+      continue;
+    }
+    try {
+      fm.write(dst, fm.read(src));
+      result.copied += 1;
+    } catch (e) {
+      result.errors.push(`${name}:${String(e || "")}`);
+    }
+  }
+}
+
+function migrateLegacyStorageFolder() {
+  const result = { copied: 0, skipped: 0, removedLegacyDir: false, errors: [] };
+  try {
+    const fm = getStorageFileManager();
+    const legacyDir = fm.joinPath(fm.documentsDirectory(), "SkyReminderData");
+    const targetDir = getStorageDir(fm);
+    if (!fm.fileExists(legacyDir) || legacyDir === targetDir) return result;
+    copyDirectoryContentsIfMissing(fm, legacyDir, targetDir, result);
+    try {
+      fm.remove(legacyDir);
+      result.removedLegacyDir = true;
+    } catch (e) {
+      result.errors.push(`remove:${String(e || "")}`);
+    }
+  } catch (e) {
+    result.errors.push(String(e || ""));
+    try { console.error("legacy storage folder migration failed", e); } catch (_) {}
+  }
+  return result;
+}
+
 async function runSkyReminderStorageMigrationsOnce() {
   const legacyKeys = [
     KEYCHAIN_KEY,
@@ -70,6 +114,7 @@ async function runSkyReminderStorageMigrationsOnce() {
   return {
     ranAt: new Date().toISOString(),
     keys: legacyKeys.map(migrateLegacyKeychainValueToFile),
+    storage: migrateLegacyStorageFolder(),
     images: migrateLegacyConstellationImages(),
   };
 }

@@ -3,7 +3,7 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "3b425d36b9ac4b36650a5fd659ddb5dd232f12d9376128856ce6062a2a0d6e23",
+    "sha256": "7d1ea59b14d1fa728ca38ee2654d362be8109c1f292813e3b305700ff0037570",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
@@ -28,14 +28,14 @@
       "file": "002_settings_store_and_cache.js",
       "role": "Notification id helpers, default settings, normalization, keychain store, cache, and settings persistence.",
       "sourceLines": "230-936",
-      "sha256": "7b9654f0aaef4b3d89d48f7c65934f28a098124f57ad39ffb4e9adbe87b3a99f",
+      "sha256": "c8fb54c16b9b8073faebb0981e7b169ec981cf67910d137b5252ac15445efaf5",
       "url": ""
     },
     {
       "file": "003a_policy_time_and_common.js",
       "role": "Architecture policy, time helpers, common scheduling helpers, and update-time schedules.",
       "sourceLines": "937-1278",
-      "sha256": "66ca13adf7a7b630c96ad49ad0b4fbf4d3665a2a4b8e14b4c8660584d4591b12",
+      "sha256": "8d302c99d14a77ab5cc8b3474dac3447ff36e3a51e918c5274ef064099d2e4c4",
       "url": ""
     },
     {
@@ -98,14 +98,14 @@
       "file": "005_app_ui_html_and_client.js",
       "role": "Interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.",
       "sourceLines": "3923-8349",
-      "sha256": "f4aaeb389b58bc1c9a2efd56c4d424e6b9213efb41caa3215a335c874bcc13be",
+      "sha256": "c9e70b9804199b08a80fe73c7e80032a0f6a4d660796ea2559ffe6dc82438a89",
       "url": ""
     },
     {
       "file": "006_app_actions_backup_and_handlers.js",
       "role": "WebView command handlers, settings export/import, backup file handling, and app-side mutation sync.",
       "sourceLines": "8350-9153",
-      "sha256": "d2f291886c3ff0f392770c4e23dae75d9f28813d41c154cd85e23a1efe2eeeca",
+      "sha256": "dfbaa4d472902c7b32f2a827da00ed168a9c137595d664a7f8932d07dc816d4a",
       "url": ""
     },
     {

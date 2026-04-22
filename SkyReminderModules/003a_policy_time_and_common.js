@@ -138,7 +138,7 @@ const MUTEX_KEY = "SKY_NOTIFY_MUTEX";
 function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function withMutex(fn, opts={}) {
   if (config.runsInWidget) return await fn();
-  const _getLock = () => { try { return Keychain.contains(MUTEX_KEY) ? JSON.parse(Keychain.get(MUTEX_KEY) || "null") : null; } catch (_) { return null; } };
+  const _getLock = () => { try { return JSON.parse(readStoredRawValue(MUTEX_KEY) || "null"); } catch (_) { return null; } };
   const ttlMs = Number.isFinite(opts.ttlMs) ? opts.ttlMs : 7000;
   const waitMs = Number.isFinite(opts.waitMs) ? opts.waitMs : 6000;
   const token = String(Date.now()) + ":" + String(Math.random()).slice(2);
@@ -147,7 +147,7 @@ async function withMutex(fn, opts={}) {
     let lock = _getLock();
     const expired = !lock || !lock.expiresAt || (Number(lock.expiresAt) <= Date.now());
     if (expired) {
-      try { Keychain.set(MUTEX_KEY, JSON.stringify({ token, expiresAt: Date.now() + ttlMs })); } catch (_) {}
+      try { writeStoredRawValue(MUTEX_KEY, JSON.stringify({ token, expiresAt: Date.now() + ttlMs })); } catch (_) {}
       let check = _getLock();
       if (check && check.token === token) break;
     }
@@ -158,8 +158,8 @@ async function withMutex(fn, opts={}) {
     return await fn();
   } finally {
     try {
-      const cur = JSON.parse(Keychain.get(MUTEX_KEY) || "null");
-      if (cur && cur.token === token) Keychain.remove(MUTEX_KEY);
+      const cur = JSON.parse(readStoredRawValue(MUTEX_KEY) || "null");
+      if (cur && cur.token === token) removeStoredRawValue(MUTEX_KEY);
     } catch (_) {}
   }
 }

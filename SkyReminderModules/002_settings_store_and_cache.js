@@ -67,6 +67,7 @@ const KEYCHAIN_KEY = "SKY_SHARDS_SETTINGS";
 const CACHE_KEY = "SKY_NOTI_CACHE";
 const RUNSTATE_KEY_PROD = "SKY_NOTIFY_RUNSTATE";
 const RUNSTATE_KEY_TEST = "SKY_NOTIFY_RUNSTATE_TEST";
+const STORAGE_DIRNAME = "SkyReminderData";
 const DEFAULT_SETTINGS = {
   theme: "dark",
   useCache: true,
@@ -264,6 +265,72 @@ function normalizeRunState(rs) {
 function normalizeDisabledList(list) {
   return Array.isArray(list) ? list : [];
 }
+function getStorageFileManager() {
+  return FileManager.iCloud();
+}
+function getStorageDir(fm = getStorageFileManager()) {
+  const dir = fm.joinPath(fm.documentsDirectory(), STORAGE_DIRNAME);
+  if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+  return dir;
+}
+function getStoragePath(key, fm = getStorageFileManager()) {
+  const safe = encodeURIComponent(String(key || "")).replace(/%/g, "_");
+  return fm.joinPath(getStorageDir(fm), `${safe}.json`);
+}
+function readStoredRawValue(key) {
+  const k = String(key || "");
+  if (!k) return null;
+  try {
+    const fm = getStorageFileManager();
+    const path = getStoragePath(k, fm);
+    if (fm.fileExists(path)) {
+      try {
+        if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
+          fm.downloadFileFromiCloud(path);
+        }
+      } catch (_) {}
+      return fm.readString(path);
+    }
+  } catch (e) {
+    try { console.error(`readStoredRawValue file error: ${k}`, e); } catch (_) {}
+  }
+  try {
+    if (Keychain.contains(k)) {
+      const raw = Keychain.get(k);
+      try { writeStoredRawValue(k, raw); } catch (_) {}
+      return raw;
+    }
+  } catch (_) {}
+  return null;
+}
+function writeStoredRawValue(key, raw) {
+  const k = String(key || "");
+  if (!k) return;
+  const fm = getStorageFileManager();
+  fm.writeString(getStoragePath(k, fm), String(raw));
+}
+function removeStoredRawValue(key) {
+  const k = String(key || "");
+  if (!k) return false;
+  let removed = false;
+  try {
+    const fm = getStorageFileManager();
+    const path = getStoragePath(k, fm);
+    if (fm.fileExists(path)) {
+      fm.remove(path);
+      removed = true;
+    }
+  } catch (e) {
+    try { console.error(`removeStoredRawValue file error: ${k}`, e); } catch (_) {}
+  }
+  try {
+    if (Keychain.contains(k)) {
+      Keychain.remove(k);
+      removed = true;
+    }
+  } catch (_) {}
+  return removed;
+}
 const Store = {
   _cache: Object.create(null),
   _clone(v) {
@@ -277,11 +344,12 @@ const Store = {
     if (Object.prototype.hasOwnProperty.call(this._cache, k)) return this._cache[k];
     let stored = null;
     try {
-      if (Keychain.contains(k)) stored = JSON.parse(Keychain.get(k));
+      const raw = readStoredRawValue(k);
+      if (raw !== null && raw !== undefined) stored = JSON.parse(raw);
     } catch (_) {}
     if (stored === null || stored === undefined) {
       stored = this._clone(defVal);
-      try { Keychain.set(k, JSON.stringify(stored)); } catch (_) {}
+      try { writeStoredRawValue(k, JSON.stringify(stored)); } catch (_) {}
     }
     const finalVal = (typeof normFn === "function") ? normFn(stored) : stored;
     this._cache[k] = finalVal;
@@ -291,7 +359,7 @@ const Store = {
     const k = String(key || "");
     const finalVal = (typeof normFn === "function") ? normFn(val) : val;
     this._cache[k] = finalVal;
-    try { Keychain.set(k, JSON.stringify(finalVal)); } catch (_) {}
+    try { writeStoredRawValue(k, JSON.stringify(finalVal)); } catch (_) {}
     return finalVal;
   },
 };
@@ -454,9 +522,7 @@ const CacheManager = {
   save: (data) => Store.save(CACHE_KEY, data),
   clear: () => {
     Store.clear(CACHE_KEY);
-    try {
-      if (Keychain.contains(CACHE_KEY)) Keychain.remove(CACHE_KEY);
-    } catch (_) {}
+    removeStoredRawValue(CACHE_KEY);
   },
   clearByPrefix: (prefix) => {
     const keyPrefix = String(prefix || "");
@@ -505,23 +571,25 @@ const CacheManager = {
 const BACKUP_PREFIX = "SKY_BACKUP_";
 function _backupKeychainValue(srcKey, dstKey) {
   try {
-    if (Keychain.contains(srcKey)) {
-      Keychain.set(dstKey, Keychain.get(srcKey));
-    } else if (Keychain.contains(dstKey)) {
-      Keychain.remove(dstKey);
+    const raw = readStoredRawValue(srcKey);
+    if (raw !== null && raw !== undefined) {
+      writeStoredRawValue(dstKey, raw);
+    } else {
+      removeStoredRawValue(dstKey);
     }
   } catch (_) {}
 }
 function _restoreKeychainValue(srcKey, dstKey) {
   try {
-    if (Keychain.contains(srcKey)) {
-      Keychain.set(dstKey, Keychain.get(srcKey));
-      Keychain.remove(srcKey);
+    const raw = readStoredRawValue(srcKey);
+    if (raw !== null && raw !== undefined) {
+      writeStoredRawValue(dstKey, raw);
+      removeStoredRawValue(srcKey);
     }
   } catch (_) {}
 }
 function _clearStoredKey(key) {
-  try { if (Keychain.contains(key)) Keychain.remove(key); } catch (_) {}
+  try { removeStoredRawValue(key); } catch (_) {}
   try { Store.clear(key); } catch (_) {}
 }
 function getReferenceTimeMs(baseTime = null) {
@@ -637,9 +705,7 @@ async function cancelPendingNotificationsByType(type, settings = null) {
 function safeRemoveKeychainKey(key, logErrors = true) {
   if (!key) return false;
   try {
-    if (!Keychain.contains(key)) return false;
-    Keychain.remove(key);
-    return true;
+    return removeStoredRawValue(key);
   } catch (e) {
     if (logErrors) console.error(e);
     return false;
@@ -658,8 +724,8 @@ function saveSettings(newSettings) {
   const snapSettings = Store.load(KEYCHAIN_KEY, DEFAULT_SETTINGS, normalizeSettings);
   let snapRunStateProd = null;
   let snapDisabledProd = null;
-  try { snapRunStateProd = Keychain.contains(RUNSTATE_KEY_PROD) ? Keychain.get(RUNSTATE_KEY_PROD) : null; } catch (_) {}
-  try { snapDisabledProd = Keychain.contains(DISABLED_NOTI_KEY_PROD) ? Keychain.get(DISABLED_NOTI_KEY_PROD) : null; } catch (_) {}
+  try { snapRunStateProd = readStoredRawValue(RUNSTATE_KEY_PROD); } catch (_) {}
+  try { snapDisabledProd = readStoredRawValue(DISABLED_NOTI_KEY_PROD); } catch (_) {}
   try {
     Store.save(KEYCHAIN_KEY, newSettings, normalizeSettings);
     return normalizeSettings(newSettings);
@@ -667,8 +733,8 @@ function saveSettings(newSettings) {
     console.error("Transaction failed during saveSettings. Rolling back.", e);
     try {
       Store.save(KEYCHAIN_KEY, snapSettings, normalizeSettings);
-      if (snapRunStateProd !== null) Keychain.set(RUNSTATE_KEY_PROD, snapRunStateProd);
-      if (snapDisabledProd !== null) Keychain.set(DISABLED_NOTI_KEY_PROD, snapDisabledProd);
+      if (snapRunStateProd !== null) writeStoredRawValue(RUNSTATE_KEY_PROD, snapRunStateProd);
+      if (snapDisabledProd !== null) writeStoredRawValue(DISABLED_NOTI_KEY_PROD, snapDisabledProd);
     } catch (rbError) {
       console.error("Rollback also failed. System may be in inconsistent state.", rbError);
     }
@@ -684,7 +750,8 @@ function getDisabledNotiKey(st) {
 function loadDisabledList(st) {
   try {
     const k = getDisabledNotiKey(st || loadSettings());
-    if (Keychain.contains(k)) return normalizeDisabledList(JSON.parse(Keychain.get(k)) || []);
+    const raw = readStoredRawValue(k);
+    if (raw !== null && raw !== undefined) return normalizeDisabledList(JSON.parse(raw) || []);
   } catch (e) { console.error("loadDisabledList error:", e); }
   return [];
 }
@@ -694,7 +761,7 @@ function saveDisabledList(list, st, baseTime = null) {
     const nowMs = getReferenceTimeMs(baseTime);
     const filtered = (Array.isArray(list) ? list : []).filter(x => Number(x?.ts || 0) > nowMs - 3 * MS_PER_DAY);
     const normalized = normalizeDisabledList(filtered);
-    Keychain.set(k, JSON.stringify(normalized));
+    writeStoredRawValue(k, JSON.stringify(normalized));
     return normalized;
   } catch (e) { console.error("saveDisabledList error:", e); }
   return [];
@@ -714,7 +781,7 @@ function saveRunState(rs, st) {
   const key = getRunStateKey(settings);
   const finalVal = normalizeRunState(rs);
   Store._cache[key] = finalVal;
-  try { Keychain.set(key, JSON.stringify(finalVal)); } catch (e) { console.error(`saveRunState failed: ${key}`, e); throw e; }
+  try { writeStoredRawValue(key, JSON.stringify(finalVal)); } catch (e) { console.error(`saveRunState failed: ${key}`, e); throw e; }
   Store.clear(key);
   const loaded = Store.load(key, {}, normalizeRunState);
   return loaded;

@@ -2592,7 +2592,7 @@ const html = `
       </div>
       <div class="section system-card">
         <h3>設定のインポート / エクスポート</h3>
-        <div class="rule-subnote">画像以外のキーチェーンを丸ごとバックアップします。読み込みは選択中の保存先にある最新バックアップを使い、データを書き換えたあと通常実行と同じように再スケジューリングします。</div>
+        <div class="rule-subnote">画像以外の保存データを丸ごとバックアップします。読み込みは選択中の保存先にある最新バックアップを使い、データを書き換えたあと通常実行と同じように再スケジューリングします。</div>
         <div class="minirow" style="margin-top:12px;">
           <div class="label">バックアップ保存先</div>
           <div class="segmented narrow">
@@ -2753,7 +2753,7 @@ const html = `
     </div>
     <div id="keychain-overlay" class="overlay">
       <div class="screen-header">
-        <div class="screen-title-wrap"><h2>キーチェーン全体表示</h2></div>
+        <div class="screen-title-wrap"><h2>保存データ全体表示</h2></div>
         <button class="help-entry-btn" onclick="closeKeychainOverlay()">閉じる</button>
       </div>
       <div class="overlay-card wide">
@@ -4370,7 +4370,7 @@ function save(el) {
     return out.join("\n");
   };
   const WEBVIEW_HANDLERS = Object.create(null);
-  const getKeychainRaw = (k) => { try { return Keychain.contains(k) ? Keychain.get(k) : null; } catch (_) { return null; } };
+  const getKeychainRaw = (k) => { try { return readStoredRawValue(k); } catch (_) { return null; } };
   const fetchAllKeychainRaw = () => ({
     settingsRaw: getKeychainRaw(KEYCHAIN_KEY),
     runStateProdRaw: getKeychainRaw(RUNSTATE_KEY_PROD),

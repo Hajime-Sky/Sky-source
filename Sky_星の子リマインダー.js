@@ -8,6 +8,7 @@ const SKY_REMINDER_MANIFEST = "manifest.json";
 const SKY_REMINDER_SETTINGS_KEY = "SKY_SHARDS_SETTINGS";
 const SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json";
 const SKY_REMINDER_MAIN_SCRIPT = "Sky_星の子リマインダー.js";
+const SKY_REMINDER_STORAGE_DIR = "SkyReminderData";
 const SKY_REMINDER_FALLBACK_PARTS = [
   "001_constants_and_navigation.js",
   "002_settings_store_and_cache.js",
@@ -39,9 +40,33 @@ async function skyReminderReadICloudText(fm, path) {
 }
 
 function skyReminderReadSettings() {
+  const readFromFile = () => {
+    const fm = FileManager.iCloud();
+    const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+    const file = encodeURIComponent(SKY_REMINDER_SETTINGS_KEY).replace(/%/g, "_") + ".json";
+    const path = fm.joinPath(dir, file);
+    if (!fm.fileExists(path)) return null;
+    try {
+      if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
+        fm.downloadFileFromiCloud(path);
+      }
+    } catch (_) {}
+    return fm.readString(path);
+  };
   try {
-    if (!Keychain.contains(SKY_REMINDER_SETTINGS_KEY)) return {};
-    const st = JSON.parse(Keychain.get(SKY_REMINDER_SETTINGS_KEY));
+    let raw = readFromFile();
+    if ((raw === null || raw === undefined) && Keychain.contains(SKY_REMINDER_SETTINGS_KEY)) {
+      raw = Keychain.get(SKY_REMINDER_SETTINGS_KEY);
+      try {
+        const fm = FileManager.iCloud();
+        const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+        if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+        const file = encodeURIComponent(SKY_REMINDER_SETTINGS_KEY).replace(/%/g, "_") + ".json";
+        fm.writeString(fm.joinPath(dir, file), raw);
+      } catch (_) {}
+    }
+    if (raw === null || raw === undefined) return {};
+    const st = JSON.parse(raw);
     return st && typeof st === "object" ? st : {};
   } catch (_) {
     return {};
@@ -53,7 +78,11 @@ function skyReminderSaveSettingsPatch(patch) {
     const st = skyReminderReadSettings();
     const cur = st.githubUpdate && typeof st.githubUpdate === "object" ? st.githubUpdate : {};
     st.githubUpdate = { ...cur, ...patch };
-    Keychain.set(SKY_REMINDER_SETTINGS_KEY, JSON.stringify(st));
+    const fm = FileManager.iCloud();
+    const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+    if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+    const file = encodeURIComponent(SKY_REMINDER_SETTINGS_KEY).replace(/%/g, "_") + ".json";
+    fm.writeString(fm.joinPath(dir, file), JSON.stringify(st));
   } catch (e) {
     console.warn(`Could not save GitHub update state: ${e}`);
   }

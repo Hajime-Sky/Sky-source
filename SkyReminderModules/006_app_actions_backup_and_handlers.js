@@ -12,22 +12,22 @@ const commitMutationAndSync = async (mutationFn, sideEffectsFn = null, successMs
   const options = buildSyncOptions(syncOptions && syncOptions.targetType, syncOptions && syncOptions.anchorLaKeys, syncOptions);
   const snapSt = Store.load(KEYCHAIN_KEY, DEFAULT_SETTINGS, normalizeSettings);
   let snapRsProd = null, snapDisProd = null, snapRsTest = null, snapDisTest = null, snapCache = null;
-  try { snapRsProd = Keychain.contains(RUNSTATE_KEY_PROD) ? Keychain.get(RUNSTATE_KEY_PROD) : null; } catch (_) {}
-  try { snapDisProd = Keychain.contains(DISABLED_NOTI_KEY_PROD) ? Keychain.get(DISABLED_NOTI_KEY_PROD) : null; } catch (_) {}
-  try { snapRsTest = Keychain.contains(RUNSTATE_KEY_TEST) ? Keychain.get(RUNSTATE_KEY_TEST) : null; } catch (_) {}
-  try { snapDisTest = Keychain.contains(DISABLED_NOTI_KEY_TEST) ? Keychain.get(DISABLED_NOTI_KEY_TEST) : null; } catch (_) {}
-  try { snapCache = Keychain.contains(CACHE_KEY) ? Keychain.get(CACHE_KEY) : null; } catch (_) {}
+  try { snapRsProd = readStoredRawValue(RUNSTATE_KEY_PROD); } catch (_) {}
+  try { snapDisProd = readStoredRawValue(DISABLED_NOTI_KEY_PROD); } catch (_) {}
+  try { snapRsTest = readStoredRawValue(RUNSTATE_KEY_TEST); } catch (_) {}
+  try { snapDisTest = readStoredRawValue(DISABLED_NOTI_KEY_TEST); } catch (_) {}
+  try { snapCache = readStoredRawValue(CACHE_KEY); } catch (_) {}
   try {
     await mutationFn(txTimeMs, options);
   } catch (e) {
     console.error("Mutation failed. Rolling back internal state...", e);
     try {
       Store.save(KEYCHAIN_KEY, snapSt, normalizeSettings);
-      if (snapRsProd !== null) Keychain.set(RUNSTATE_KEY_PROD, snapRsProd); else { Store.clear(RUNSTATE_KEY_PROD); safeRemoveKeychainKey(RUNSTATE_KEY_PROD, false); }
-      if (snapDisProd !== null) Keychain.set(DISABLED_NOTI_KEY_PROD, snapDisProd); else { Store.clear(DISABLED_NOTI_KEY_PROD); safeRemoveKeychainKey(DISABLED_NOTI_KEY_PROD, false); }
-      if (snapRsTest !== null) Keychain.set(RUNSTATE_KEY_TEST, snapRsTest); else { Store.clear(RUNSTATE_KEY_TEST); safeRemoveKeychainKey(RUNSTATE_KEY_TEST, false); }
-      if (snapDisTest !== null) Keychain.set(DISABLED_NOTI_KEY_TEST, snapDisTest); else { Store.clear(DISABLED_NOTI_KEY_TEST); safeRemoveKeychainKey(DISABLED_NOTI_KEY_TEST, false); }
-      if (snapCache !== null) Keychain.set(CACHE_KEY, snapCache); else { Store.clear(CACHE_KEY); safeRemoveKeychainKey(CACHE_KEY, false); }
+      if (snapRsProd !== null) writeStoredRawValue(RUNSTATE_KEY_PROD, snapRsProd); else { Store.clear(RUNSTATE_KEY_PROD); safeRemoveKeychainKey(RUNSTATE_KEY_PROD, false); }
+      if (snapDisProd !== null) writeStoredRawValue(DISABLED_NOTI_KEY_PROD, snapDisProd); else { Store.clear(DISABLED_NOTI_KEY_PROD); safeRemoveKeychainKey(DISABLED_NOTI_KEY_PROD, false); }
+      if (snapRsTest !== null) writeStoredRawValue(RUNSTATE_KEY_TEST, snapRsTest); else { Store.clear(RUNSTATE_KEY_TEST); safeRemoveKeychainKey(RUNSTATE_KEY_TEST, false); }
+      if (snapDisTest !== null) writeStoredRawValue(DISABLED_NOTI_KEY_TEST, snapDisTest); else { Store.clear(DISABLED_NOTI_KEY_TEST); safeRemoveKeychainKey(DISABLED_NOTI_KEY_TEST, false); }
+      if (snapCache !== null) writeStoredRawValue(CACHE_KEY, snapCache); else { Store.clear(CACHE_KEY); safeRemoveKeychainKey(CACHE_KEY, false); }
       persistSettingsAndSyncUI(snapSt, txTimeMs);
       try { updateRealmOverrideUI(snapSt, txTimeMs); } catch (e) { console.error("Realm override UI rollback error:", e); }
       await syncSchedulesAndManageUI(new Date(txTimeMs), snapSt, null, []);
@@ -148,12 +148,12 @@ function setKeychainRawValue(key, raw) {
     const k = String(key || '').trim();
     if (!k) return;
     if (raw == null) {
-      try { if (Keychain.contains(k)) Keychain.remove(k); } catch (_) {}
+      try { removeStoredRawValue(k); } catch (_) {}
       try { Store.clear(k); } catch (_) {}
       return;
     }
     const value = typeof raw === 'string' ? raw : JSON.stringify(raw);
-    Keychain.set(k, String(value));
+    writeStoredRawValue(k, String(value));
     try { Store.clear(k); } catch (_) {}
   }
 const buildKeychainExportPayload = () => {

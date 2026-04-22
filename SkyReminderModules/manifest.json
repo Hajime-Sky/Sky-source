@@ -3,7 +3,7 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "6755791d2026a0823eec377469c8c22149f378fa72e12eef0012c9b4a0508cac",
+    "sha256": "3c85df95c6956afa89fc43bf8f2a33e8318f768f651455d890c5f447ebb5122d",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
@@ -28,7 +28,7 @@
       "file": "002_settings_store_and_cache.js",
       "role": "Notification id helpers, default settings, normalization, keychain store, cache, and settings persistence.",
       "sourceLines": "230-936",
-      "sha256": "a3c8261ddb34f19d244f5f665ae7664c65b960ea5ee5d2972da284ed81b0f4aa",
+      "sha256": "f3208200824fdbb7964f21c3e5538e96c206d01f64605c5858ef029a1bc845cf",
       "url": ""
     },
     {
@@ -129,15 +129,23 @@
       "file": "009_storage_migrations.js",
       "role": "One-time migration from legacy Keychain/local image storage to unified file storage.",
       "sourceLines": "new",
-      "sha256": "37ba568e8e173b20df7daa89369528cf89f5d4ce8fa8013968134e5955575312",
+      "sha256": "f779b4697fc66bcf7808a2a6e7d379a6b1fa9054418a35f04199bf762265a052",
       "url": ""
     },
     {
       "id": "2026-04-22-unify-scriptable-folder-v1",
       "file": "009_storage_migrations.js",
-      "role": "One-time migration from separate SkyReminderData/SkyReminderModules folders into Scriptable/SkyReminder.",
+      "role": "One-time migration from separate SkyReminderData/SkyReminderModules or Scriptable/SkyReminder folders into Scriptable/HajimeSkyTools/star-reminder.",
       "sourceLines": "new",
-      "sha256": "37ba568e8e173b20df7daa89369528cf89f5d4ce8fa8013968134e5955575312",
+      "sha256": "f779b4697fc66bcf7808a2a6e7d379a6b1fa9054418a35f04199bf762265a052",
+      "url": ""
+    },
+    {
+      "id": "2026-04-22-unify-hajime-sky-tools-v1",
+      "file": "009_storage_migrations.js",
+      "role": "One-time migration from Scriptable/SkyReminder into the shared Scriptable/HajimeSkyTools folder.",
+      "sourceLines": "new",
+      "sha256": "f779b4697fc66bcf7808a2a6e7d379a6b1fa9054418a35f04199bf762265a052",
       "url": ""
     }
   ]

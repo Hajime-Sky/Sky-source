@@ -100,6 +100,27 @@ function migrateLegacyStorageFolder() {
   return result;
 }
 
+function migratePreviousUnifiedStorageFolder() {
+  const result = { copied: 0, skipped: 0, removedLegacyDir: false, errors: [] };
+  try {
+    const fm = getStorageFileManager();
+    const previousDir = fm.joinPath(fm.documentsDirectory(), "SkyReminder/data");
+    const targetDir = getStorageDir(fm);
+    if (!fm.fileExists(previousDir) || previousDir === targetDir) return result;
+    copyDirectoryContentsIfMissing(fm, previousDir, targetDir, result);
+    try {
+      fm.remove(previousDir);
+      result.removedLegacyDir = true;
+    } catch (e) {
+      result.errors.push(`remove:${String(e || "")}`);
+    }
+  } catch (e) {
+    result.errors.push(String(e || ""));
+    try { console.error("previous storage folder migration failed", e); } catch (_) {}
+  }
+  return result;
+}
+
 async function runSkyReminderStorageMigrationsOnce() {
   const legacyKeys = [
     KEYCHAIN_KEY,
@@ -114,6 +135,7 @@ async function runSkyReminderStorageMigrationsOnce() {
   return {
     ranAt: new Date().toISOString(),
     keys: legacyKeys.map(migrateLegacyKeychainValueToFile),
+    previousStorage: migratePreviousUnifiedStorageFolder(),
     storage: migrateLegacyStorageFolder(),
     images: migrateLegacyConstellationImages(),
   };

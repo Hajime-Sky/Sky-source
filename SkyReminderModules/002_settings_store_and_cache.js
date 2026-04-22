@@ -67,7 +67,8 @@ const KEYCHAIN_KEY = "SKY_SHARDS_SETTINGS";
 const CACHE_KEY = "SKY_NOTI_CACHE";
 const RUNSTATE_KEY_PROD = "SKY_NOTIFY_RUNSTATE";
 const RUNSTATE_KEY_TEST = "SKY_NOTIFY_RUNSTATE_TEST";
-const STORAGE_DIRNAME = "SkyReminder/data";
+const STORAGE_DIRNAME = "HajimeSkyTools/star-reminder/data";
+const PREVIOUS_STORAGE_DIRNAME = "SkyReminder/data";
 const LEGACY_STORAGE_DIRNAME = "SkyReminderData";
 const DEFAULT_SETTINGS = {
   theme: "dark",
@@ -283,12 +284,17 @@ function getLegacyStoragePath(key, fm = getStorageFileManager()) {
   const dir = fm.joinPath(fm.documentsDirectory(), LEGACY_STORAGE_DIRNAME);
   return fm.joinPath(dir, `${safe}.json`);
 }
+function getPreviousStoragePath(key, fm = getStorageFileManager()) {
+  const safe = encodeURIComponent(String(key || "")).replace(/%/g, "_");
+  const dir = fm.joinPath(fm.documentsDirectory(), PREVIOUS_STORAGE_DIRNAME);
+  return fm.joinPath(dir, `${safe}.json`);
+}
 function readStoredRawValue(key) {
   const k = String(key || "");
   if (!k) return null;
   try {
     const fm = getStorageFileManager();
-    const paths = [getStoragePath(k, fm), getLegacyStoragePath(k, fm)];
+    const paths = [getStoragePath(k, fm), getPreviousStoragePath(k, fm), getLegacyStoragePath(k, fm)];
     for (const path of paths) {
       if (!fm.fileExists(path)) continue;
       try {
@@ -322,7 +328,7 @@ function removeStoredRawValue(key) {
   let removed = false;
   try {
     const fm = getStorageFileManager();
-    for (const path of [getStoragePath(k, fm), getLegacyStoragePath(k, fm)]) {
+    for (const path of [getStoragePath(k, fm), getPreviousStoragePath(k, fm), getLegacyStoragePath(k, fm)]) {
       if (fm.fileExists(path)) {
         fm.remove(path);
         removed = true;

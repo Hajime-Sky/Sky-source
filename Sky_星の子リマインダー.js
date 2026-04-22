@@ -3,14 +3,16 @@
 // icon-color: yellow; icon-glyph: jedi;
 // Sky_星の子リマインダー v2.17 modular loader
 
-const SKY_REMINDER_APP_DIR = "SkyReminder";
+const SKY_TOOLS_APP_DIR = "HajimeSkyTools";
+const SKY_REMINDER_APP_DIR = "star-reminder";
 const SKY_REMINDER_MODULE_DIR = "modules";
 const SKY_REMINDER_LEGACY_MODULE_DIR = "SkyReminderModules";
 const SKY_REMINDER_MANIFEST = "manifest.json";
 const SKY_REMINDER_SETTINGS_KEY = "SKY_SHARDS_SETTINGS";
 const SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json";
 const SKY_REMINDER_MAIN_SCRIPT = "Sky_星の子リマインダー.js";
-const SKY_REMINDER_STORAGE_DIR = "SkyReminder/data";
+const SKY_REMINDER_STORAGE_DIR = "HajimeSkyTools/star-reminder/data";
+const SKY_REMINDER_PREVIOUS_STORAGE_DIR = "SkyReminder/data";
 const SKY_REMINDER_LEGACY_STORAGE_DIR = "SkyReminderData";
 const SKY_REMINDER_MIGRATION_STATE_KEY = "SKY_STORAGE_MIGRATIONS";
 const SKY_REMINDER_KNOWN_MIGRATIONS = Object.freeze({
@@ -49,7 +51,7 @@ async function skyReminderReadICloudText(fm, path) {
 function skyReminderReadSettings() {
   const readFromFile = () => {
     const fm = FileManager.iCloud();
-    const dirs = [SKY_REMINDER_STORAGE_DIR, SKY_REMINDER_LEGACY_STORAGE_DIR];
+    const dirs = [SKY_REMINDER_STORAGE_DIR, SKY_REMINDER_PREVIOUS_STORAGE_DIR, SKY_REMINDER_LEGACY_STORAGE_DIR];
     const file = encodeURIComponent(SKY_REMINDER_SETTINGS_KEY).replace(/%/g, "_") + ".json";
     for (const dirName of dirs) {
       const dir = fm.joinPath(fm.documentsDirectory(), dirName);
@@ -122,10 +124,16 @@ function skyReminderLegacyStorageFilePath(fm, key) {
   return fm.joinPath(dir, file);
 }
 
+function skyReminderPreviousStorageFilePath(fm, key) {
+  const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_PREVIOUS_STORAGE_DIR);
+  const file = encodeURIComponent(String(key || "")).replace(/%/g, "_") + ".json";
+  return fm.joinPath(dir, file);
+}
+
 function skyReminderReadStorageRaw(key) {
   try {
     const fm = FileManager.iCloud();
-    const paths = [skyReminderStorageFilePath(fm, key), skyReminderLegacyStorageFilePath(fm, key)];
+    const paths = [skyReminderStorageFilePath(fm, key), skyReminderPreviousStorageFilePath(fm, key), skyReminderLegacyStorageFilePath(fm, key)];
     for (const path of paths) {
       if (!fm.fileExists(path)) continue;
       try {
@@ -142,7 +150,9 @@ function skyReminderReadStorageRaw(key) {
 }
 
 function skyReminderAppDir(fm) {
-  const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_APP_DIR);
+  const toolsDir = fm.joinPath(fm.documentsDirectory(), SKY_TOOLS_APP_DIR);
+  if (!fm.fileExists(toolsDir)) fm.createDirectory(toolsDir, true);
+  const dir = fm.joinPath(toolsDir, SKY_REMINDER_APP_DIR);
   if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
   return dir;
 }
@@ -180,8 +190,10 @@ function skyReminderDeleteLegacyModuleDir(fm, activeModuleDir) {
 
 function skyReminderDeleteLegacyDataDirIfMigrated(fm) {
   try {
-    const legacyDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_LEGACY_STORAGE_DIR);
     const newDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+    const previousDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_PREVIOUS_STORAGE_DIR);
+    if (previousDir !== newDir && fm.fileExists(previousDir) && fm.fileExists(newDir)) fm.remove(previousDir);
+    const legacyDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_LEGACY_STORAGE_DIR);
     if (legacyDir !== newDir && fm.fileExists(legacyDir) && fm.fileExists(newDir)) fm.remove(legacyDir);
   } catch (e) {
     console.warn(`Could not delete legacy data dir: ${e}`);

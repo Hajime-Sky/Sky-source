@@ -24,7 +24,7 @@ The Scriptable root file remains in its original location and acts only as a loa
 
 ## Migrations
 
-- `009_storage_migrations.js`: one-time migrations from legacy Keychain/local image storage and the old separate `SkyReminderData` / `SkyReminderModules` folders into the unified local `SkyReminder` folder. It is listed under `manifest.json` `migrations`, not normal `parts`; the loader fetches it only when a migration ID has not been applied, records the applied ID, and deletes any local migration file after loading.
+- `009_storage_migrations.js`: one-time migrations from legacy Keychain/local image storage and the old separate `SkyReminderData` / `SkyReminderModules` folders into the shared local `HajimeSkyTools/star-reminder` folder. It is listed under `manifest.json` `migrations`, not normal `parts`; the loader fetches it only when a migration ID has not been applied, records the applied ID, and deletes any local migration file after loading.
 
 ## GitHub update path
 
@@ -36,4 +36,4 @@ The root Scriptable loader checks the remote manifest before running local modul
 - `daily`: update when files are missing or at least 24 hours have passed since the previous check.
 - `always`: check on every run and download changed files.
 
-The loader downloads only changed or missing part files into Scriptable's local `SkyReminder/modules` folder. Runtime data, settings, state, and generated images live under `SkyReminder/data`.
+The loader downloads only changed or missing part files into Scriptable's local `HajimeSkyTools/star-reminder/modules` folder. Runtime data, settings, state, and generated images live under `HajimeSkyTools/star-reminder/data`.

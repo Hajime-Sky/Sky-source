@@ -507,7 +507,6 @@ const html = `
       .opt.selected { background: var(--card-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: 600; color: var(--text); }
       input[type="datetime-local"] { width: 100%; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; box-sizing: border-box; }
       input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: ${isDark ? 'invert(1)' : 'none'}; }
-      .keychain-pre { width: 100%; max-height: 150px; padding: 12px; margin: 10px 0 0 0; border-radius: 12px; border: 1px solid var(--border); background: #1c1c1e; color: #30d158; font-family: ui-monospace, Menlo, monospace; font-size: 11px; box-sizing: border-box; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-all; line-height: 1.45; }
       .screen{max-width:600px;margin:0 auto; padding: calc(var(--header-h, 80px) + 4px) 20px 40px 20px; box-sizing: border-box;}
       .section{margin-top:10px;padding:14px 12px;border-radius:18px;border:1px solid var(--border);background:var(--card-bg);}
       .section h3{margin:0 0 8px 0;font-size:16px;}
@@ -752,7 +751,6 @@ const html = `
       .section,
       .settings-container,
       .manage-group-wrap,
-      .keychain-pre,
       .dialog-box,
       .overlay-card {
         background: var(--card-bg-soft);
@@ -1269,32 +1267,6 @@ const html = `
       }
       .system-copy-row .btn {
         min-width: 180px;
-      }
-      .keychain-pre {
-        max-height: 220px;
-        padding: 14px;
-        margin-top: 12px;
-        line-height: 1.5;
-      }
-      .overlay-card.wide {
-        max-width: min(960px, calc(100vw - 24px));
-      }
-      .keychain-overlay-pre {
-        width: 100%;
-        max-height: calc(100vh - 190px);
-        padding: 14px;
-        margin: 0;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border-color);
-        background: color-mix(in srgb, var(--bg-color) 92%, transparent);
-        color: var(--text-main);
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 11px;
-        overflow: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-        line-height: 1.5;
-        box-sizing: border-box;
       }
       .zone-destructive {
         margin-top: 22px;
@@ -2620,11 +2592,8 @@ const html = `
           <div class="btn danger del-btn" onclick="confirmDelete('${CACHE_KEY}', 'キャッシュ', this)">キャッシュ</div>
         </div>
         <div class="btnrow system-copy-row" style="flex-wrap:wrap; gap:8px; margin-top:12px;">
-          <div class="btn small del-btn" id="btn-copykeychain" style="flex: 1;" onclick="sendCommand('scriptable-keychaincopy://', this)">すべてのデータをコピー</div>
-          <div class="btn small secondary" id="btn-openkeychain" style="flex: 1; margin-top:0;" onclick="openKeychainOverlay()">全体表示</div>
           <div class="btn small secondary" id="btn-copyhtml" style="flex: 1 1 100%; margin-top:0;" onclick="sendCommand('scriptable-htmlcopy://', this)">現在のHTMLを書き出す</div>
         </div>
-        <pre class="keychain-pre" id="keychain-pre"></pre>
       </div>
       <div class="section zone-destructive system-card">
         <h3>[危険] データの初期化</h3>
@@ -2749,15 +2718,6 @@ const html = `
       </div>
       <div class="overlay-card">
         <div id="help-text-content" style="line-height:1.6;"></div>
-      </div>
-    </div>
-    <div id="keychain-overlay" class="overlay">
-      <div class="screen-header">
-        <div class="screen-title-wrap"><h2>保存データ全体表示</h2></div>
-        <button class="help-entry-btn" onclick="closeKeychainOverlay()">閉じる</button>
-      </div>
-      <div class="overlay-card wide">
-        <pre class="keychain-overlay-pre" id="keychain-overlay-pre"></pre>
       </div>
     </div>
 <script>
@@ -2989,7 +2949,6 @@ function updateRemainBadges(){
 var currentScreen = "${initialScreen}";
 var screenHistory = [];
 var SCREEN_HOOKS = {
-  'data': function() { try { sendCommand('scriptable-keychain://1'); } catch(_) {} },
   'manage': function() { try { manageRefresh(); } catch(_) {} },
   'intro': function() { try { activateVideoSlots(document.getElementById('screen-intro')); } catch(_) {} }
 };
@@ -3080,8 +3039,7 @@ function activateVideoSlots(root){
 function isOverlayActive(){
   try{
     var help = document.getElementById('help-overlay');
-    var keychain = document.getElementById('keychain-overlay');
-    return !!((help && help.classList.contains('active')) || (keychain && keychain.classList.contains('active')));
+    return !!(help && help.classList.contains('active'));
   }catch(_){ return false; }
 }
 function applyScreen() {
@@ -3113,7 +3071,6 @@ function setScreen(s) {
     if (String(s || '') !== 'notify') sortOriginalSinListsOnLeave();
   } catch (_) {}
   closeHelp();
-  closeKeychainOverlay();
   currentScreen = s;
   applyScreen();
   if (SCREEN_HOOKS[s]) SCREEN_HOOKS[s]();
@@ -3121,7 +3078,6 @@ function setScreen(s) {
 function openHelp(targetScreen){
   try{
     sortOriginalSinListsOnLeave();
-    closeKeychainOverlay();
     var id = String(targetScreen || currentScreen || 'shards');
     var appCtx = window.__APP_CONTEXT || {};
     var defs = Array.isArray(appCtx.navScreens) ? appCtx.navScreens : [];
@@ -3147,23 +3103,8 @@ function closeHelp(){
   if (overlay) overlay.classList.remove('active');
   try { applyScreen(); } catch(_) {}
 }
-function openKeychainOverlay(){
-  var overlay = document.getElementById('keychain-overlay');
-  if (!overlay) return;
-  var src = document.getElementById('keychain-pre');
-  var dst = document.getElementById('keychain-overlay-pre');
-  if (dst && src) dst.textContent = src.textContent || '';
-  overlay.classList.add('active');
-  try { applyScreen(); } catch(_) {}
-}
-function closeKeychainOverlay(){
-  var overlay = document.getElementById('keychain-overlay');
-  if (overlay) overlay.classList.remove('active');
-  try { applyScreen(); } catch(_) {}
-}
 function goBack(){
   closeHelp();
-  closeKeychainOverlay();
 }
       function updateSetting(path, value) {
         try {
@@ -4135,19 +4076,10 @@ function save(el) {
         if (currentScreen === 'intro') { try { activateVideoSlots(document.getElementById('screen-intro')); } catch(_){} }
         try{ updateRemainBadges(); }catch(_){ }
         try{ adjustHeaderPadding(); }catch(_){ }
-        try{ sendCommand('scriptable-keychain://1'); }catch(_){ }
         if (currentScreen === 'manage') { try{ showManageLoading(); manageRefresh(); }catch(_){} }
-        function refreshIfKeychainVisible(){
-          try{
-            var kc = document.getElementById('screen-data');
-            if (kc && kc.style.display !== 'none') sendCommand('scriptable-keychain://1');
-          }catch(_){}
-        }
-        window.addEventListener('focus', refreshIfKeychainVisible);
         window.addEventListener('resize', function(){ try{ adjustHeaderPadding(); }catch(_){} });
         document.addEventListener('visibilitychange', function(){
           if (document.visibilityState === 'visible') {
-            refreshIfKeychainVisible();
             try{ adjustHeaderPadding(); }catch(_){ }
           }
         });
@@ -4358,7 +4290,7 @@ function save(el) {
                   : _parseJson(path, null);
     return { action, path, payload, query, url: u };
   };
-  const jsRefreshKeychainSoon = () => "try{ setTimeout(function(){ sendCommand('scriptable-keychain://1'); }, 80); }catch(_){ }";
+  const jsRefreshKeychainSoon = () => "";
   const jsToast = (msg) => `try{ toast(${JSON.stringify(String(msg || ""))}); }catch(_){ }`;
   const jsPulse = (kind) => `try{ pulse(document.documentElement, ${JSON.stringify(String(kind || "ok"))}); }catch(_){ }`;
   const makeFeedbackJS = (o) => {

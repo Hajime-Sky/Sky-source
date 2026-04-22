@@ -21,14 +21,14 @@
       "file": "001_constants_and_navigation.js",
       "role": "Constants, action ids, navigation definitions, drawing defaults, and small shared helpers.",
       "sourceLines": "4-229",
-      "sha256": "79484f198eee1d2e8bcd7c1e77850635db5cf2fba362d470e63310b4bdfddd6f",
+      "sha256": "81d5c2b40d94c51fe5f5b496da5f477e2105c0de17668261495b43c8b9741d1c",
       "url": ""
     },
     {
       "file": "002_settings_store_and_cache.js",
       "role": "Notification id helpers, default settings, normalization, keychain store, cache, and settings persistence.",
       "sourceLines": "230-936",
-      "sha256": "c8fb54c16b9b8073faebb0981e7b169ec981cf67910d137b5252ac15445efaf5",
+      "sha256": "82f9be600ca8c6c3b1b71145c54e719bacaf85dc0377604c754bf8153b907178",
       "url": ""
     },
     {
@@ -98,14 +98,14 @@
       "file": "005_app_ui_html_and_client.js",
       "role": "Interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.",
       "sourceLines": "3923-8349",
-      "sha256": "c9e70b9804199b08a80fe73c7e80032a0f6a4d660796ea2559ffe6dc82438a89",
+      "sha256": "eadce7d76773185dddc90bde672df3891e9bcfa6cb9394c38ad6be5735647197",
       "url": ""
     },
     {
       "file": "006_app_actions_backup_and_handlers.js",
       "role": "WebView command handlers, settings export/import, backup file handling, and app-side mutation sync.",
       "sourceLines": "8350-9153",
-      "sha256": "dfbaa4d472902c7b32f2a827da00ed168a9c137595d664a7f8932d07dc816d4a",
+      "sha256": "ecb1ff91fc1985b732b6f6440b29168f96890ac55f3719376b750dbf0f6423c0",
       "url": ""
     },
     {

@@ -384,12 +384,14 @@ const CONSTELLATION_REALM_RGB = Object.freeze({
   "捨て地": [105, 146, 67],
   "書庫": [8, 112, 198]
 });
-function getImagesDir(fm = FileManager.local()) {
-  const dir = fm.joinPath(fm.documentsDirectory(), "sky_constellations_images");
+function getImagesDir(fm = getStorageFileManager()) {
+  const baseDir = fm.joinPath(fm.documentsDirectory(), STORAGE_DIRNAME);
+  if (!fm.fileExists(baseDir)) fm.createDirectory(baseDir, true);
+  const dir = fm.joinPath(baseDir, "images");
   if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
   return dir;
 }
-function getConstellationImagePath(realm, theme = "dark", fm = FileManager.local()) {
+function getConstellationImagePath(realm, theme = "dark", fm = getStorageFileManager()) {
   const normalizedRealm = String(realm || "").trim();
   const themeKey = theme === "light" ? "light" : "dark";
   return fm.joinPath(getImagesDir(fm), `${normalizedRealm}__${themeKey}__r${CONSTELLATION_IMAGE_REV}.png`);
@@ -397,7 +399,7 @@ function getConstellationImagePath(realm, theme = "dark", fm = FileManager.local
 function getConstellationImageUrl(realm) {
   return `https://Hajime-Sky.github.io/Sky-source/constellations/${encodeURIComponent(String(realm || "").trim())}.png`;
 }
-async function downloadConstellationImage(realm, fm = FileManager.local()) {
+async function downloadConstellationImage(realm, fm = getStorageFileManager()) {
   const normalizedRealm = String(realm || "").trim();
   if (!normalizedRealm) throw new Error("realm_required");
   const req = new Request(getConstellationImageUrl(normalizedRealm));
@@ -463,7 +465,7 @@ async function downloadConstellationImage(realm, fm = FileManager.local()) {
   fm.write(getConstellationImagePath(normalizedRealm, "dark", fm), Data.fromBase64String(darkB64));
   fm.write(getConstellationImagePath(normalizedRealm, "light", fm), Data.fromBase64String(lightB64));
 }
-async function syncAllConstellationImages(realms = CONSTELLATION_REALMS, fm = FileManager.local()) {
+async function syncAllConstellationImages(realms = CONSTELLATION_REALMS, fm = getStorageFileManager()) {
   const results = [];
   const targets = Array.isArray(realms) ? realms : CONSTELLATION_REALMS;
   for (const realm of targets) {
@@ -477,19 +479,19 @@ async function syncAllConstellationImages(realms = CONSTELLATION_REALMS, fm = Fi
   }
   return results;
 }
-function getCachedConstellationImage(realm, theme = "dark", fm = FileManager.local()) {
+function getCachedConstellationImage(realm, theme = "dark", fm = getStorageFileManager()) {
   const normalizedRealm = String(realm || "").trim();
   if (!normalizedRealm) return null;
   const path = getConstellationImagePath(normalizedRealm, theme, fm);
   if (!fm.fileExists(path)) return null;
   try { return fm.readImage(path); } catch (_) { return null; }
 }
-function hasConstellationImagePair(realm, fm = FileManager.local()) {
+function hasConstellationImagePair(realm, fm = getStorageFileManager()) {
   const normalizedRealm = String(realm || "").trim();
   return fm.fileExists(getConstellationImagePath(normalizedRealm, "dark", fm)) &&
          fm.fileExists(getConstellationImagePath(normalizedRealm, "light", fm));
 }
-async function ensureConstellationImages(realms = CONSTELLATION_REALMS, fm = FileManager.local()) {
+async function ensureConstellationImages(realms = CONSTELLATION_REALMS, fm = getStorageFileManager()) {
   const targets = Array.isArray(realms) ? realms : CONSTELLATION_REALMS;
   let needsSync = false;
   for (const realm of targets) {

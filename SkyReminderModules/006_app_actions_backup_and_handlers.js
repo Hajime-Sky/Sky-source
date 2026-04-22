@@ -407,33 +407,6 @@ WEBVIEW_HANDLERS[WV_ACTION.ORIGINAL_SIN_COMPLETE] = async (_r) => {
     buildSyncOptions("originalSin", weekLaKeys)
   );
 };
-WEBVIEW_HANDLERS[WV_ACTION.KEYCHAIN] = async (_r) => {
-  try {
-    const st = loadSettings();
-    const rsKey = getRunStateKey(st);
-    const disKey = getDisabledNotiKey(st);
-    const data = {
-      settings: st,
-      runstate: loadRunState(st),
-      disabled: loadDisabledList(st),
-      keys: {
-        settings: KEYCHAIN_KEY,
-        runstate: rsKey,
-        disabled: disKey,
-        cache: CACHE_KEY
-      },
-      architectureReview: buildArchitectureReview()
-    };
-    const json = JSON.stringify(data);
-    safeEvalJsWithGen(`
-      var txt = JSON.stringify(${json}, null, 2);
-      var pre = document.getElementById('keychain-pre');
-      if (pre) pre.textContent = txt;
-      var overlayPre = document.getElementById('keychain-overlay-pre');
-      if (overlayPre) overlayPre.textContent = txt;
-    `, getReferenceTimeMs());
-  } catch (e) { console.error("Keychain fetch error", e); }
-};
 WEBVIEW_HANDLERS["setcount"] = async (r) => {
   const type = String(r.path || "").trim();
   const val = Number(r.query?.v || 0);
@@ -507,11 +480,6 @@ WEBVIEW_HANDLERS[WV_ACTION.RESET_DAY] = async (r) => {
     const savedRs = saveRunState(rs, settings);
     pushRemainInfoForTime(txTimeMs, settings, savedRs, operateLaKey);
   }, null, () => msg, buildSyncOptions(null, operateLaKey ? [operateLaKey] : []));
-};
-WEBVIEW_HANDLERS[WV_ACTION.KEYCHAIN_COPY] = async (_r) => {
-  const payload = buildKeychainExportPayload();
-  try { Pasteboard.copyString(JSON.stringify(payload, null, 2)); } catch (_) {}
-  notifySuccess("コピーしました", { refreshKeychain: false });
 };
 function buildHtmlDumpFilename(now = new Date()) {
   const d = (now instanceof Date) ? now : new Date(now);
@@ -643,7 +611,7 @@ WEBVIEW_HANDLERS["clearcache"] = async (_r) => {
       Store.clear(CACHE_KEY);
     },
     async () => {
-      const fm = FileManager.local();
+      const fm = getStorageFileManager();
       const dir = getImagesDir(fm);
       if (fm.fileExists(dir)) { try { fm.remove(dir); } catch (_) {} }
       const results = await syncAllConstellationImages(CONSTELLATION_REALMS, fm);
@@ -660,7 +628,7 @@ WEBVIEW_HANDLERS["deleteimages"] = async (_r) => {
   await commitMutationAndSync(
     async () => { /* 内部状態の変更なし */ },
     async () => {
-      const fm = FileManager.local();
+      const fm = getStorageFileManager();
       const dir = getImagesDir(fm);
       if (fm.fileExists(dir)) { try { fm.remove(dir); } catch (_) {} }
     },
@@ -677,7 +645,7 @@ WEBVIEW_HANDLERS[WV_ACTION.DELETE_ALL_KEYCHAIN] = async (_r) => {
       }
     },
     async () => {
-      const fm = FileManager.local();
+      const fm = getStorageFileManager();
       const dir = getImagesDir(fm);
       if (fm.fileExists(dir)) { try { fm.remove(dir); } catch (e) { console.error(e); } }
       const { pending, managedIds } = await fetchManagedPendingContext();

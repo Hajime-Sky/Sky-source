@@ -523,6 +523,7 @@ const html = `
       .btn{padding:12px 12px;border-radius:14px;border:1px solid var(--border);background:var(--btn-bg, rgba(10,132,255,0.12));text-align:center;font-weight:800;margin-top:10px;}
       .btn.pm{width:36px;height:36px;padding:0;font-size:20px;font-weight:400;display:flex;align-items:center;justify-content:center;border-radius:12px;box-sizing:border-box;margin:0;}
       .btn.danger{background:var(--btn-danger-bg, rgba(255,59,48,0.14));}
+      .btn.is-busy{ opacity:0.78; pointer-events:none; }
       .helpbar { margin-top: 12px; margin-bottom: 16px; }
       .footerbar{ position: fixed; left: 0; right: 0; bottom: 0; height: var(--footer-h); height: calc(var(--footer-h) + env(safe-area-inset-bottom)); padding: 10px 14px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--footer-glass-bg); z-index: 30; display:flex; justify-content:center; align-items:center; }
       .footerbtn{ width: 100%; max-width: 600px; text-align:center; padding: 12px 14px; border-radius: 14px; font-weight: 900; border: 1px solid var(--border); background: rgba(48,209,88,0.22); box-sizing: border-box; }
@@ -2554,7 +2555,7 @@ const html = `
           </div>
         </div>
         <div class="system-stack-actions" style="margin-top:12px;">
-          <div class="btn secondary" onclick="sendCommand('scriptable-githubupdatenow://1', this)">今すぐ更新</div>
+          <div class="btn secondary" data-action="github-update-now" onclick="runGithubUpdateNow(this)">今すぐ更新</div>
         </div>
         <div class="form-row" style="margin-top:12px; align-items:stretch; flex-direction:column;">
           <span class="form-label">GitHub manifest URL</span>
@@ -2835,6 +2836,22 @@ function sendCommand(baseUrl, element, payload, delay){
       setTimeout(__drainCmdQueue, 0);
     }catch(_){}
   }
+}
+function runGithubUpdateNow(el){
+  try{
+    if (el && el.dataset && el.dataset.busy === '1') return;
+    if (el) {
+      if (el.dataset) {
+        el.dataset.busy = '1';
+        el.dataset.originalText = el.textContent || '今すぐ更新';
+      }
+      el.textContent = '更新を確認中...';
+      el.classList.add('is-busy');
+      pulse(el, 'ok');
+    }
+    toast('GitHub更新を確認中...');
+  }catch(e){}
+  sendCommand('scriptable-githubupdatenow://1', el);
 }
 window.__APP_CONTEXT = ${JSON.stringify(__appContext)};
       var currentSettings = window.__APP_CONTEXT.settings || {};

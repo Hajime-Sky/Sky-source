@@ -3,11 +3,11 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "3c85df95c6956afa89fc43bf8f2a33e8318f768f651455d890c5f447ebb5122d",
+    "sha256": "3116b785eaae0ec79e659633b8358729c521128015dfaf7b0280d60d8627dfa0",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
-  "generatedAt": "2026-04-21T21:03:13+09:00",
+  "generatedAt": "2026-04-22T11:40:56.191Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -98,14 +98,14 @@
       "file": "005_app_ui_html_and_client.js",
       "role": "Interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.",
       "sourceLines": "3923-8349",
-      "sha256": "eadce7d76773185dddc90bde672df3891e9bcfa6cb9394c38ad6be5735647197",
+      "sha256": "a02ce62f62d6f6efcff0c7ef230642fc1e3895667bb5c519ef2e8a1242a89d73",
       "url": ""
     },
     {
       "file": "006_app_actions_backup_and_handlers.js",
       "role": "WebView command handlers, settings export/import, backup file handling, and app-side mutation sync.",
       "sourceLines": "8350-9153",
-      "sha256": "ecb1ff91fc1985b732b6f6440b29168f96890ac55f3719376b750dbf0f6423c0",
+      "sha256": "cf8cdf5dc710ea9f72eedf26ad6ae9d68c49b3a21d3c4efaa15c6b143c0a427c",
       "url": ""
     },
     {

@@ -362,11 +362,37 @@ async function skyReminderFetchText(url) {
   return await req.loadString();
 }
 
+function skyReminderBuildRestartUrl() {
+  try {
+    if (typeof URLScheme !== "undefined" && URLScheme && typeof URLScheme.forRunningScript === "function") {
+      const url = String(URLScheme.forRunningScript() || "").trim();
+      if (url) return url;
+    }
+  } catch (_) {}
+  return "scriptable:///run?scriptName=" + encodeURIComponent(SKY_REMINDER_MAIN_SCRIPT);
+}
+
 function skyReminderRestartScript() {
   try {
-    Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(SKY_REMINDER_MAIN_SCRIPT));
+    globalThis.__SKY_REMINDER_RESTART_AFTER_WEBVIEW = true;
+  } catch (_) {}
+  try {
+    Safari.open(skyReminderBuildRestartUrl());
   } catch (e) {
     console.warn(`Could not restart Sky reminder: ${e}`);
+  }
+}
+
+async function skyReminderRestartAfterWebViewIfRequested() {
+  let requested = false;
+  try { requested = globalThis.__SKY_REMINDER_RESTART_AFTER_WEBVIEW === true; } catch (_) {}
+  if (!requested) return;
+  try { globalThis.__SKY_REMINDER_RESTART_AFTER_WEBVIEW = false; } catch (_) {}
+  await new Promise(resolve => Timer.schedule(0.7, false, resolve));
+  try {
+    Safari.open(skyReminderBuildRestartUrl());
+  } catch (e) {
+    console.warn(`Could not restart Sky reminder after WebView: ${e}`);
   }
 }
 
@@ -425,7 +451,7 @@ async function skyReminderManualGithubUpdateAndRestart() {
   const moduleDir = skyReminderResolveLocalModuleDirForExistingInstall(fm);
   await skyReminderCopyLegacyManifestIfNeeded(fm, moduleDir);
   const localManifest = await skyReminderLoadManifest(fm, moduleDir);
-  return await skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest, { force: true, restartOnUpdated: true });
+  return await skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest, { force: true, restartOnUpdated: false });
 }
 
 async function skyReminderRunFromParts() {

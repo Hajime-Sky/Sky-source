@@ -718,23 +718,44 @@ WEBVIEW_HANDLERS[WV_ACTION.NOTIF_ENABLE_ALL] = async (_r) => {
   }, "すべての通知をオンにしました");
 };
 WEBVIEW_HANDLERS[WV_ACTION.GITHUB_UPDATE_NOW] = async (_r) => {
+  const setGithubUpdateButtonState = (text, busy, kind = "ok") => {
+    safeEvalJsWithGen(`
+      (function(){
+        var btns = document.querySelectorAll('[data-action="github-update-now"]');
+        btns.forEach(function(b){
+          b.textContent = ${JSON.stringify(String(text || "今すぐ更新"))};
+          if (b.dataset) b.dataset.busy = ${busy ? "'1'" : "''"};
+          if (${busy ? "true" : "false"}) b.classList.add('is-busy');
+          else b.classList.remove('is-busy');
+          pulse(b, ${JSON.stringify(kind)});
+        });
+      })();
+    `);
+  };
   try {
     if (typeof skyReminderManualGithubUpdateAndRestart !== "function") {
+      setGithubUpdateButtonState("今すぐ更新", false, "err");
       notifyError("GitHub更新機能を呼び出せませんでした");
       return;
     }
+    setGithubUpdateButtonState("更新を確認中...", true, "ok");
     const before = loadSettings();
     const beforeUpdatedAt = Number(before.githubUpdate && before.githubUpdate.lastUpdatedAtMs || 0) || 0;
     await skyReminderManualGithubUpdateAndRestart();
     const after = loadSettings();
     const afterUpdatedAt = Number(after.githubUpdate && after.githubUpdate.lastUpdatedAtMs || 0) || 0;
     if (afterUpdatedAt > beforeUpdatedAt) {
+      setGithubUpdateButtonState("更新完了。再起動します...", true, "ok");
       notifySuccess("更新しました。スクリプトを再起動します", { refreshKeychain: true });
+      await new Promise(resolve => Timer.schedule(0.45, false, resolve));
+      if (typeof skyReminderRestartScript === "function") skyReminderRestartScript();
     } else {
+      setGithubUpdateButtonState("今すぐ更新", false, "ok");
       notifySuccess("更新はありませんでした", { refreshKeychain: true });
     }
   } catch (e) {
     console.error("GitHub manual update error:", e);
+    setGithubUpdateButtonState("今すぐ更新", false, "err");
     notifyError("GitHub更新に失敗しました");
   }
 };
@@ -764,6 +785,9 @@ wv.shouldAllowRequest = (req) => {
   }
 };
   await wv.present();
+  if (typeof skyReminderRestartAfterWebViewIfRequested === "function") {
+    await skyReminderRestartAfterWebViewIfRequested();
+  }
 }
 async function checkAutomationTimeShift(now, settings) {
   const st = settings || loadSettings();

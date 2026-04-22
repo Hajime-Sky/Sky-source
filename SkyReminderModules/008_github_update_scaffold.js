@@ -2,7 +2,7 @@ const SKY_REMINDER_UPDATE_SCAFFOLD = Object.freeze({
   enabled: true,
   manifestUrl: "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
   hashAlgorithm: "sha256",
-  policies: Object.freeze(["missing", "daily", "always"]),
+  policies: Object.freeze(["none", "daily", "always"]),
 });
 
 function buildSkyReminderUpdatePlan(localManifest, remoteManifest) {

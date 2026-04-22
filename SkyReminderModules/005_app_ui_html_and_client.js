@@ -2576,10 +2576,13 @@ const html = `
         <div class="minirow" style="margin-top:12px;">
           <div class="label">更新タイミング</div>
           <div class="segmented narrow">
-            <div class="opt ${(settings.githubUpdate?.policy || 'daily') === 'missing' ? 'selected' : ''}" onclick="handleSettingChange('githubUpdate.policy', 'missing', this)">不足時</div>
+            <div class="opt ${(settings.githubUpdate?.policy || 'daily') === 'none' ? 'selected' : ''}" onclick="handleSettingChange('githubUpdate.policy', 'none', this)">更新しない</div>
             <div class="opt ${(settings.githubUpdate?.policy || 'daily') === 'daily' ? 'selected' : ''}" onclick="handleSettingChange('githubUpdate.policy', 'daily', this)">24時間</div>
             <div class="opt ${(settings.githubUpdate?.policy || 'daily') === 'always' ? 'selected' : ''}" onclick="handleSettingChange('githubUpdate.policy', 'always', this)">毎回</div>
           </div>
+        </div>
+        <div class="system-stack-actions" style="margin-top:12px;">
+          <div class="btn secondary" onclick="sendCommand('scriptable-githubupdatenow://1', this)">今すぐ更新</div>
         </div>
         <div class="form-row" style="margin-top:12px; align-items:stretch; flex-direction:column;">
           <span class="form-label">GitHub manifest URL</span>

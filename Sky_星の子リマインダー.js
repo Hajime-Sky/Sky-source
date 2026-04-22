@@ -64,7 +64,7 @@ function skyReminderGetUpdateConfig(manifest) {
   const cfg = st.githubUpdate && typeof st.githubUpdate === "object" ? st.githubUpdate : {};
   const mfUpdate = manifest && manifest.update && typeof manifest.update === "object" ? manifest.update : {};
   const remoteManifestUrl = String(cfg.remoteManifestUrl || mfUpdate.remoteManifestUrl || SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL).trim();
-  const policy = ["missing", "daily", "always"].includes(String(cfg.policy || "")) ? String(cfg.policy) : "daily";
+  const policy = ["none", "daily", "always"].includes(String(cfg.policy || "")) ? String(cfg.policy) : "daily";
   const lastCheckedAtMs = Number(cfg.lastCheckedAtMs || 0) || 0;
   return { remoteManifestUrl, policy, lastCheckedAtMs };
 }
@@ -118,13 +118,22 @@ async function skyReminderFetchText(url) {
   return await req.loadString();
 }
 
-async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest) {
+function skyReminderRestartScript() {
+  try {
+    Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(SKY_REMINDER_MAIN_SCRIPT));
+  } catch (e) {
+    console.warn(`Could not restart Sky reminder: ${e}`);
+  }
+}
+
+async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest, options = {}) {
   const missing = skyReminderHasMissingFiles(fm, moduleDir, localManifest);
   const cfg = skyReminderGetUpdateConfig(localManifest);
   if (!cfg.remoteManifestUrl) return localManifest;
   const nowMs = Date.now();
   const dailyDue = nowMs - cfg.lastCheckedAtMs >= 24 * 60 * 60 * 1000;
-  const shouldCheck = missing || cfg.policy === "always" || (cfg.policy === "daily" && dailyDue);
+  const force = options && options.force === true;
+  const shouldCheck = force || missing || cfg.policy === "always" || (cfg.policy === "daily" && dailyDue);
   if (!shouldCheck) return localManifest;
   try {
     const remoteManifest = await skyReminderFetchJson(cfg.remoteManifestUrl);
@@ -134,7 +143,7 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest)
     if (localManifest && Array.isArray(localManifest.parts)) {
       for (const p of localManifest.parts) if (p && p.file) localByFile[String(p.file)] = p;
     }
-    const changed = remoteParts.filter((p) => {
+    const changed = missing ? remoteParts : remoteParts.filter((p) => {
       const file = String(p.file);
       const path = fm.joinPath(moduleDir, file);
       const local = localByFile[file] || null;
@@ -155,6 +164,7 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest)
       }
       fm.writeString(fm.joinPath(moduleDir, SKY_REMINDER_MANIFEST), JSON.stringify(remoteManifest, null, 2));
       skyReminderSaveSettingsPatch({ lastCheckedAtMs: nowMs, lastUpdatedAtMs: nowMs, lastUpdateStatus: `updated:parts=${changed.length},main=${mainHashChanged ? 1 : 0}` });
+      if (options && options.restartOnUpdated === true) skyReminderRestartScript();
       return remoteManifest;
     }
     skyReminderSaveSettingsPatch({ lastCheckedAtMs: nowMs, lastUpdateStatus: "no-update" });
@@ -164,6 +174,13 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest)
     console.warn(`GitHub update skipped: ${e}`);
     return localManifest;
   }
+}
+
+async function skyReminderManualGithubUpdateAndRestart() {
+  const fm = FileManager.iCloud();
+  const moduleDir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_MODULE_DIR);
+  const localManifest = await skyReminderLoadManifest(fm, moduleDir);
+  return await skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest, { force: true, restartOnUpdated: true });
 }
 
 async function skyReminderRunFromParts() {

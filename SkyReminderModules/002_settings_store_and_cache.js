@@ -246,7 +246,7 @@ function normalizeSettings(st) {
   for (const k of Object.keys(base.notify)) out.notify[k] = { ...base.notify[k], ...(isPlainObject(st?.notify?.[k]) ? st.notify[k] : {}) };
   const githubUpdate = isPlainObject(st.githubUpdate) ? st.githubUpdate : {};
   out.githubUpdate = { ...base.githubUpdate, ...githubUpdate };
-  if (!["missing", "daily", "always"].includes(String(out.githubUpdate.policy || ""))) out.githubUpdate.policy = base.githubUpdate.policy;
+  if (!["none", "daily", "always"].includes(String(out.githubUpdate.policy || ""))) out.githubUpdate.policy = base.githubUpdate.policy;
   out.githubUpdate.remoteManifestUrl = String(out.githubUpdate.remoteManifestUrl || base.githubUpdate.remoteManifestUrl).trim();
   out.githubUpdate.lastCheckedAtMs = Math.max(0, Number(out.githubUpdate.lastCheckedAtMs || 0) || 0);
   out.githubUpdate.lastUpdatedAtMs = Math.max(0, Number(out.githubUpdate.lastUpdatedAtMs || 0) || 0);

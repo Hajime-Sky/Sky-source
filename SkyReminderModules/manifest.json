@@ -3,7 +3,7 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "c691543b6bc4e5815a3f6c6e2f99930de489eeac302c90c12ae398d461331e58",
+    "sha256": "3b425d36b9ac4b36650a5fd659ddb5dd232f12d9376128856ce6062a2a0d6e23",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
@@ -21,14 +21,14 @@
       "file": "001_constants_and_navigation.js",
       "role": "Constants, action ids, navigation definitions, drawing defaults, and small shared helpers.",
       "sourceLines": "4-229",
-      "sha256": "692a8548e41a7e12f3f03d48ba8d60204475b03618b70634b25a99d0a68909da",
+      "sha256": "79484f198eee1d2e8bcd7c1e77850635db5cf2fba362d470e63310b4bdfddd6f",
       "url": ""
     },
     {
       "file": "002_settings_store_and_cache.js",
       "role": "Notification id helpers, default settings, normalization, keychain store, cache, and settings persistence.",
       "sourceLines": "230-936",
-      "sha256": "6c080c69b96da7600f36ef721d272e7fa4cbfcffdcab7ca734c53a0459304a2a",
+      "sha256": "7b9654f0aaef4b3d89d48f7c65934f28a098124f57ad39ffb4e9adbe87b3a99f",
       "url": ""
     },
     {
@@ -98,21 +98,21 @@
       "file": "005_app_ui_html_and_client.js",
       "role": "Interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.",
       "sourceLines": "3923-8349",
-      "sha256": "75e871b1bb612280f511648b993d6d9fca5f2174da0a2431678a86b85587a082",
+      "sha256": "f4aaeb389b58bc1c9a2efd56c4d424e6b9213efb41caa3215a335c874bcc13be",
       "url": ""
     },
     {
       "file": "006_app_actions_backup_and_handlers.js",
       "role": "WebView command handlers, settings export/import, backup file handling, and app-side mutation sync.",
       "sourceLines": "8350-9153",
-      "sha256": "a36163569049c63b0f42997c29d6ae13970051be788266c80f07d9bdf816f4ab",
+      "sha256": "d2f291886c3ff0f392770c4e23dae75d9f28813d41c154cd85e23a1efe2eeeca",
       "url": ""
     },
     {
       "file": "008_github_update_scaffold.js",
       "role": "GitHub update metadata and manifest-diff planning helpers.",
       "sourceLines": "new",
-      "sha256": "b2fcf581fdf37739f8395cfa26a3c52d02e8648bf08bca55cf0c1a334e495bc8",
+      "sha256": "5f7b1d222119250014c8fdaf789eeb1784efe3b0398f4456ef66916b6e856e15",
       "url": ""
     },
     {

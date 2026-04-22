@@ -749,6 +749,27 @@ WEBVIEW_HANDLERS[WV_ACTION.NOTIF_ENABLE_ALL] = async (_r) => {
     saveDisabledList([], st, txTimeMs);
   }, "すべての通知をオンにしました");
 };
+WEBVIEW_HANDLERS[WV_ACTION.GITHUB_UPDATE_NOW] = async (_r) => {
+  try {
+    if (typeof skyReminderManualGithubUpdateAndRestart !== "function") {
+      notifyError("GitHub更新機能を呼び出せませんでした");
+      return;
+    }
+    const before = loadSettings();
+    const beforeUpdatedAt = Number(before.githubUpdate && before.githubUpdate.lastUpdatedAtMs || 0) || 0;
+    await skyReminderManualGithubUpdateAndRestart();
+    const after = loadSettings();
+    const afterUpdatedAt = Number(after.githubUpdate && after.githubUpdate.lastUpdatedAtMs || 0) || 0;
+    if (afterUpdatedAt > beforeUpdatedAt) {
+      notifySuccess("更新しました。スクリプトを再起動します", { refreshKeychain: true });
+    } else {
+      notifySuccess("更新はありませんでした", { refreshKeychain: true });
+    }
+  } catch (e) {
+    console.error("GitHub manual update error:", e);
+    notifyError("GitHub更新に失敗しました");
+  }
+};
 const ALLOWED_EMBED_REQUEST_RE = /^(https?:\/\/)(www\.youtube(?:-nocookie)?\.com\/|i\.ytimg\.com\/|s\.ytimg\.com\/|yt3\.ggpht\.com\/|([A-Za-z0-9-]+\.)*googlevideo\.com\/|www\.google\.com\/recaptcha\/|consent\.youtube\.com\/)/i;
 wv.shouldAllowRequest = (req) => {
   const handleWvError = (e) => { try { console.error(e); } catch (_) {} notifyError("WebViewエラーが発生しました（詳細はScriptableのログを確認）"); return false; };

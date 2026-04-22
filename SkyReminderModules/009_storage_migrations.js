@@ -1,20 +1,3 @@
-const SKY_REMINDER_MIGRATION_STATE_KEY = "SKY_STORAGE_MIGRATIONS";
-const SKY_REMINDER_STORAGE_MIGRATION_ID = "2026-04-22-unify-storage-v1";
-
-function loadSkyReminderMigrationState() {
-  try {
-    const raw = readStoredRawValue(SKY_REMINDER_MIGRATION_STATE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch (_) {
-    return {};
-  }
-}
-
-function saveSkyReminderMigrationState(state) {
-  writeStoredRawValue(SKY_REMINDER_MIGRATION_STATE_KEY, JSON.stringify(state || {}, null, 2));
-}
-
 function removeLegacyKeychainOnly(key) {
   try {
     const k = String(key || "");
@@ -74,10 +57,6 @@ function migrateLegacyConstellationImages() {
 }
 
 async function runSkyReminderStorageMigrationsOnce() {
-  const state = loadSkyReminderMigrationState();
-  const applied = state.applied && typeof state.applied === "object" ? state.applied : {};
-  if (applied[SKY_REMINDER_STORAGE_MIGRATION_ID]) return applied[SKY_REMINDER_STORAGE_MIGRATION_ID];
-
   const legacyKeys = [
     KEYCHAIN_KEY,
     RUNSTATE_KEY_PROD,
@@ -88,15 +67,11 @@ async function runSkyReminderStorageMigrationsOnce() {
     BACKUP_PREFIX + KEYCHAIN_KEY,
     MUTEX_KEY,
   ];
-  const result = {
-    id: SKY_REMINDER_STORAGE_MIGRATION_ID,
+  return {
     ranAt: new Date().toISOString(),
     keys: legacyKeys.map(migrateLegacyKeychainValueToFile),
     images: migrateLegacyConstellationImages(),
   };
-  state.applied = { ...applied, [SKY_REMINDER_STORAGE_MIGRATION_ID]: result };
-  saveSkyReminderMigrationState(state);
-  return result;
 }
 
 await runSkyReminderStorageMigrationsOnce();

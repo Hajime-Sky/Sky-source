@@ -9,6 +9,10 @@ const SKY_REMINDER_SETTINGS_KEY = "SKY_SHARDS_SETTINGS";
 const SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json";
 const SKY_REMINDER_MAIN_SCRIPT = "Sky_星の子リマインダー.js";
 const SKY_REMINDER_STORAGE_DIR = "SkyReminderData";
+const SKY_REMINDER_MIGRATION_STATE_KEY = "SKY_STORAGE_MIGRATIONS";
+const SKY_REMINDER_KNOWN_MIGRATIONS = Object.freeze({
+  "009_storage_migrations.js": "2026-04-22-unify-storage-v1",
+});
 const SKY_REMINDER_FALLBACK_PARTS = [
   "001_constants_and_navigation.js",
   "002_settings_store_and_cache.js",
@@ -24,7 +28,6 @@ const SKY_REMINDER_FALLBACK_PARTS = [
   "005_app_ui_html_and_client.js",
   "006_app_actions_backup_and_handlers.js",
   "008_github_update_scaffold.js",
-  "009_storage_migrations.js",
   "007_shortcut_entrypoint.js",
 ];
 
@@ -89,6 +92,61 @@ function skyReminderSaveSettingsPatch(patch) {
   }
 }
 
+function skyReminderStorageFilePath(fm, key) {
+  const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+  const file = encodeURIComponent(String(key || "")).replace(/%/g, "_") + ".json";
+  return fm.joinPath(dir, file);
+}
+
+function skyReminderReadStorageRaw(key) {
+  try {
+    const fm = FileManager.iCloud();
+    const path = skyReminderStorageFilePath(fm, key);
+    if (!fm.fileExists(path)) return null;
+    try {
+      if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
+        fm.downloadFileFromiCloud(path);
+      }
+    } catch (_) {}
+    return fm.readString(path);
+  } catch (_) {
+    return null;
+  }
+}
+
+function skyReminderWriteStorageRaw(key, value) {
+  const fm = FileManager.iCloud();
+  const dir = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_STORAGE_DIR);
+  if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+  fm.writeString(skyReminderStorageFilePath(fm, key), String(value ?? ""));
+}
+
+function skyReminderReadAppliedMigrationIds() {
+  try {
+    const raw = skyReminderReadStorageRaw(SKY_REMINDER_MIGRATION_STATE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    if (Array.isArray(parsed?.applied)) return parsed.applied.map(String).filter(Boolean);
+    if (parsed?.applied && typeof parsed.applied === "object") return Object.keys(parsed.applied).filter(Boolean);
+  } catch (_) {}
+  return [];
+}
+
+function skyReminderSaveAppliedMigrationIds(ids) {
+  const unique = Array.from(new Set((Array.isArray(ids) ? ids : []).map(String).filter(Boolean))).sort();
+  skyReminderWriteStorageRaw(SKY_REMINDER_MIGRATION_STATE_KEY, JSON.stringify({ applied: unique }, null, 2));
+}
+
+function skyReminderMarkMigrationApplied(id) {
+  const key = String(id || "").trim();
+  if (!key) return;
+  const ids = skyReminderReadAppliedMigrationIds();
+  if (!ids.includes(key)) {
+    ids.push(key);
+    skyReminderSaveAppliedMigrationIds(ids);
+  }
+}
+
 function skyReminderGetUpdateConfig(manifest) {
   const st = skyReminderReadSettings();
   const cfg = st.githubUpdate && typeof st.githubUpdate === "object" ? st.githubUpdate : {};
@@ -108,9 +166,29 @@ async function skyReminderLoadManifest(fm, moduleDir) {
 }
 
 function skyReminderManifestParts(manifest) {
-  return manifest && Array.isArray(manifest.parts) && manifest.parts.length
+  const parts = manifest && Array.isArray(manifest.parts) && manifest.parts.length
     ? manifest.parts.map((p) => typeof p === "string" ? p : p.file).filter(Boolean)
     : SKY_REMINDER_FALLBACK_PARTS;
+  return parts.filter((file) => !SKY_REMINDER_KNOWN_MIGRATIONS[String(file || "")]);
+}
+
+function skyReminderManifestMigrations(manifest) {
+  const byFile = Object.create(null);
+  const addMigration = (migration) => {
+    if (!migration || !migration.id || !migration.file) return;
+    byFile[String(migration.file)] = migration;
+  };
+  if (manifest && Array.isArray(manifest.migrations)) {
+    for (const migration of manifest.migrations) addMigration(migration);
+  }
+  if (manifest && Array.isArray(manifest.parts)) {
+    for (const part of manifest.parts) {
+      const file = String((typeof part === "string" ? part : part?.file) || "");
+      const id = SKY_REMINDER_KNOWN_MIGRATIONS[file];
+      if (id) addMigration({ ...(typeof part === "object" && part ? part : {}), id, file });
+    }
+  }
+  return Object.values(byFile);
 }
 
 function skyReminderHasMissingFiles(fm, moduleDir, manifest) {
@@ -126,6 +204,42 @@ function skyReminderResolvePartUrl(remoteManifestUrl, part) {
   const file = encodeURIComponent(String(part && part.file || partUrl || "")).replace(/%2F/g, "/");
   const base = String(remoteManifestUrl || "").replace(/[^/]*$/, "");
   return base + file;
+}
+
+async function skyReminderLoadMigrationSource(fm, moduleDir, manifest, migration) {
+  const cfg = skyReminderGetUpdateConfig(manifest);
+  const path = fm.joinPath(moduleDir, String(migration.file));
+  try {
+    return await skyReminderFetchText(skyReminderResolvePartUrl(cfg.remoteManifestUrl, migration));
+  } catch (e) {
+    if (fm.fileExists(path)) return await skyReminderReadICloudText(fm, path);
+    throw e;
+  }
+}
+
+function skyReminderDeleteLocalMigrationFiles(fm, moduleDir, manifest) {
+  const files = new Set(["009_storage_migrations.js"]);
+  for (const migration of skyReminderManifestMigrations(manifest)) files.add(String(migration.file));
+  for (const file of files) {
+    try {
+      const path = fm.joinPath(moduleDir, file);
+      if (fm.fileExists(path)) fm.remove(path);
+    } catch (e) {
+      console.warn(`Could not delete migration module ${file}: ${e}`);
+    }
+  }
+}
+
+async function skyReminderBuildMigrationChunks(fm, moduleDir, manifest) {
+  const applied = new Set(skyReminderReadAppliedMigrationIds());
+  const chunks = [];
+  for (const migration of skyReminderManifestMigrations(manifest)) {
+    const id = String(migration.id || "").trim();
+    if (!id || applied.has(id)) continue;
+    const source = await skyReminderLoadMigrationSource(fm, moduleDir, manifest, migration);
+    chunks.push(`\n// ---- migration:${id}:${migration.file} ----\ntry {\n${source}\nskyReminderMarkMigrationApplied(${JSON.stringify(id)});\n} catch (e) {\n  try { console.error(${JSON.stringify(`Sky reminder migration failed: ${id}`)}, e); } catch (_) {}\n  throw e;\n}\n`);
+  }
+  return chunks;
 }
 
 function skyReminderResolveMainScriptUrl(remoteManifestUrl, remoteManifest) {
@@ -222,11 +336,19 @@ async function skyReminderRunFromParts() {
   if (!parts.length) throw new Error("Sky reminder manifest has no parts.");
 
   const chunks = [];
+  const migrationChunks = await skyReminderBuildMigrationChunks(fm, moduleDir, manifest);
+  let insertedMigrations = false;
   for (const part of parts) {
+    if (!insertedMigrations && part === "007_shortcut_entrypoint.js") {
+      chunks.push(...migrationChunks);
+      insertedMigrations = true;
+    }
     const partPath = fm.joinPath(moduleDir, part);
     const text = await skyReminderReadICloudText(fm, partPath);
     chunks.push(`\n// ---- ${part} ----\n${text}\n`);
   }
+  if (!insertedMigrations) chunks.push(...migrationChunks);
+  skyReminderDeleteLocalMigrationFiles(fm, moduleDir, manifest);
 
   const source = `(async () => {\n${chunks.join("\n")}\n})()`;
   return await eval(source);

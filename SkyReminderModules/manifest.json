@@ -3,7 +3,7 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "92bf4464a6638566fbf299b978059c2bae6a9106dee664cb9b722f0228d2e2c5",
+    "sha256": "d66c7109505b3ea6ef3960f4e367dc00f9b1fb0b1e677b2ca193cfcb5ad4f2f3",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
   "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
@@ -116,17 +116,20 @@
       "url": ""
     },
     {
-      "file": "009_storage_migrations.js",
-      "role": "One-time storage migrations for legacy Keychain values and old file locations.",
-      "sourceLines": "new",
-      "sha256": "fa8202f45719bde3cae3bb5b27085f32f55032604455506d3cae6e586f2147f6",
-      "url": ""
-    },
-    {
       "file": "007_shortcut_entrypoint.js",
       "role": "Shortcut/query handling, startup checks, runtime mode dispatch, and Script.complete().",
       "sourceLines": "9154-9417",
       "sha256": "926f9f8958d68de6c4b51168866dbb15635b381bf272cdb10ec03d841859a2a9",
+      "url": ""
+    }
+  ],
+  "migrations": [
+    {
+      "id": "2026-04-22-unify-storage-v1",
+      "file": "009_storage_migrations.js",
+      "role": "One-time migration from legacy Keychain/local image storage to unified file storage.",
+      "sourceLines": "new",
+      "sha256": "a10c0d09c075e4cdb9859dbd2b9340eb18dd1a151c85f78aac93b42adcdbd6c8",
       "url": ""
     }
   ]

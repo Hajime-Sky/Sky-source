@@ -203,7 +203,7 @@ async function cancelPendingBySpecs(specs, pendingSnapshot=null) {
 }
 const GAME = {
   realms: ["草原", "雨林", "峡谷", "捨て地", "書庫"],
-  patterns: [{skip:[6,7],off:110,maps:["蝶々の住処","小川","スケートリンク","倒壊した祠","星月夜の砂漠"],ac:0},{skip:[7,1],off:130,maps:["草原の村","晴れ間","スケートリンク","戦場","星月夜の砂漠"],ac:0},{skip:[1,2],off:460,maps:["洞窟","神殿奥","夢見の町","墓所","クラゲの入り江"],ac:2.5},{skip:[2,3],off:140,maps:["鳥の塔","ツリーハウス","夢見の町","難破船","クラゲの入り江"],ac:3.5},{skip:[3,4],off:210,maps:["楽園の島々","高台広場","隠者の峠","忘れられた方舟","クラゲの入り江"],ac:3.5}],
+  patterns: [{skip:[6,7],off:110,maps:["蝶々の住処","小川","スケートリンク","倒壊した祠","星月夜の砂漠"],ac:0},{skip:[7,1],off:130,maps:["草原の村","神殿手前（墓場）","スケートリンク","戦場","星月夜の砂漠"],ac:0},{skip:[1,2],off:460,maps:["洞窟","神殿奥","夢見の町","墓所","クラゲの入り江"],ac:2.5},{skip:[2,3],off:140,maps:["鳥の塔","ツリーハウス","夢見の町","難破船","クラゲの入り江"],ac:3.5},{skip:[3,4],off:210,maps:["楽園の島々","高台広場","隠者の峠","忘れられた方舟","クラゲの入り江"],ac:3.5}],
   shardConfig: { landOffsetMs: 520000, intervalMin: { red: 360, black: 480 }, durationMin: 240 }
 };
 const createEmptyEventInfo = (baseZ=0, lbl="", diff=0) => ({ isRed: false, baseZero: baseZ, type: { i:"", l:"" }, realm: "", map: "", placeName: computePlaceName("", ""), reward: null, occurrences: [], displayDate: new Date((baseZ || 0) + 1000), label: lbl, isToday: diff === 0 });

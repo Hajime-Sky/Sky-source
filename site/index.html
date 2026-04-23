@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HajimeSky Tools Installer</title>
+  <meta name="description" content="Scriptable向けSkyツールのインストールページ">
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg: #101214;
+      --panel: #181d21;
+      --panel-2: #20272d;
+      --text: #f5f3ec;
+      --muted: #b9c0c5;
+      --line: #39434a;
+      --accent: #ffd45a;
+      --accent-2: #68d4c5;
+      --danger: #ff7979;
+      --shadow: 0 18px 55px rgba(0,0,0,.32);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    main {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);
+      gap: 40px;
+      align-items: center;
+      padding: clamp(24px, 5vw, 64px);
+    }
+    .hero {
+      max-width: 760px;
+    }
+    h1 {
+      font-size: clamp(38px, 6vw, 74px);
+      line-height: 1.02;
+      margin: 0 0 18px;
+      letter-spacing: 0;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.75;
+      max-width: 680px;
+      margin: 0 0 30px;
+    }
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin-top: 28px;
+      max-width: 660px;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      align-items: start;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .num {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      font-weight: 700;
+      border-radius: 8px;
+      background: rgba(255,255,255,.03);
+    }
+    .install-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .panel-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+    .panel-copy {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0 0 18px;
+    }
+    .actions {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    button, a.button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.2;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      color: #111;
+      background: var(--accent);
+      min-height: 50px;
+    }
+    button.secondary, a.button.secondary {
+      background: var(--panel-2);
+      color: var(--text);
+      border-color: var(--line);
+    }
+    button:active, a.button:active { transform: translateY(1px); }
+    textarea {
+      width: 100%;
+      min-height: 116px;
+      resize: vertical;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #0b0d0f;
+      color: var(--text);
+      padding: 12px;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .status {
+      min-height: 24px;
+      color: var(--accent-2);
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 8px 0 0;
+    }
+    .status.error { color: var(--danger); }
+    .device {
+      margin-top: 24px;
+      background: #0b0d0f;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      aspect-ratio: 16 / 10;
+      display: grid;
+      align-items: center;
+      overflow: hidden;
+    }
+    .device-ui {
+      display: grid;
+      gap: 10px;
+    }
+    .bar {
+      height: 12px;
+      border-radius: 8px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+    .bar.w1 { width: 86%; background: linear-gradient(90deg, var(--accent), #f58f52); }
+    .bar.w2 { width: 68%; }
+    .bar.w3 { width: 74%; background: linear-gradient(90deg, var(--accent-2), #78a8ff); }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .tile {
+      min-height: 64px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    @media (max-width: 820px) {
+      main {
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 24px;
+        padding: 26px 18px 40px;
+      }
+      h1 { font-size: 42px; }
+      .lead { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>HajimeSky Tools Installer</h1>
+      <p class="lead">Scriptableで使うSkyツールをGitHubから取得して、iCloudのScriptableフォルダへ配置します。初回だけ短いコードを貼り付ければ、以後はGitHub側の更新を使えます。</p>
+      <div class="steps" aria-label="インストール手順">
+        <div class="step"><div class="num">1</div><div>このページのボタンでインストーラコードをクリップボードへコピーします。</div></div>
+        <div class="step"><div class="num">2</div><div>Scriptableの新規スクリプト画面が開いたら、本文欄にペーストします。</div></div>
+        <div class="step"><div class="num">3</div><div>再生ボタンを押すと、星の子リマインダーや今日の大キャン案内を選んでインストールできます。</div></div>
+      </div>
+    </section>
+
+    <section class="install-panel" aria-label="インストール操作">
+      <p class="panel-title">Scriptableへ送る</p>
+      <p class="panel-copy">ボタンが失敗した場合は、下のコード欄を手動でコピーしてからScriptableを開いてください。</p>
+      <div class="actions">
+        <button id="installButton">コードをコピーしてScriptableを開く</button>
+        <button class="secondary" id="copyButton">コードだけコピー</button>
+        <a class="button secondary" id="openScriptable" href="scriptable:///add?scriptName=Sky%20Tools%20Installer">Scriptableを開く</a>
+      </div>
+      <textarea id="bootstrapCode" readonly spellcheck="false">const code = await new Request("https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/installer/SkyToolsInstaller.js").loadString()
+await eval(`(async()=>{
+${code}
+})()`)</textarea>
+      <p class="status" id="status" role="status"></p>
+      <div class="device" aria-hidden="true">
+        <div class="device-ui">
+          <div class="bar w1"></div>
+          <div class="bar w2"></div>
+          <div class="bar w3"></div>
+          <div class="mini-grid">
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const codeEl = document.getElementById("bootstrapCode");
+    const statusEl = document.getElementById("status");
+    const scriptableUrl = "scriptable:///add?scriptName=Sky%20Tools%20Installer";
+
+    function setStatus(text, isError) {
+      statusEl.textContent = text || "";
+      statusEl.classList.toggle("error", !!isError);
+    }
+
+    async function copyBootstrap() {
+      const code = codeEl.value;
+      try {
+        await navigator.clipboard.writeText(code);
+        setStatus("コピーしました。Scriptableで本文欄にペーストしてください。", false);
+        return true;
+      } catch (e) {
+        codeEl.focus();
+        codeEl.select();
+        try {
+          const ok = document.execCommand("copy");
+          setStatus(ok ? "コピーしました。Scriptableで本文欄にペーストしてください。" : "自動コピーに失敗しました。コード欄を手動でコピーしてください。", !ok);
+          return !!ok;
+        } catch (_) {
+          setStatus("自動コピーに失敗しました。コード欄を手動でコピーしてください。", true);
+          return false;
+        }
+      }
+    }
+
+    document.getElementById("copyButton").addEventListener("click", copyBootstrap);
+    document.getElementById("installButton").addEventListener("click", async () => {
+      await copyBootstrap();
+      setTimeout(() => { window.location.href = scriptableUrl; }, 180);
+    });
+  </script>
+</body>
+</html>

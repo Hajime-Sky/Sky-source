@@ -329,27 +329,85 @@ function getOriginalSinWeekLaKeys(targetNow, settings) {
   const current = getReferenceDate(targetNow);
   const effectiveNow = getEffectiveNow(current, st);
   const baseLaKey = fmtLaKey(effectiveNow);
+  return getOriginalSinWeekLaKeysForLaKey(baseLaKey);
+}
+function getOriginalSinWeekStartLaKeyForLaKey(laKey) {
+  const baseLaKey = String(laKey || fmtLaKey(getReferenceDate()));
   const baseNoon = laNoonDateFromKey(baseLaKey);
-  if (!baseNoon) return [baseLaKey];
+  if (!baseNoon) return baseLaKey;
   const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   const weekday = weekdayMap[String(getVisualUTC(baseNoon, TZ_LA).weekday || 'Sun')] ?? 0;
   const sundayNoon = new Date(baseNoon.getTime() - weekday * MS_PER_DAY);
+  return fmtLaKey(sundayNoon);
+}
+function getOriginalSinWeekLaKeysForLaKey(laKey) {
+  const baseLaKey = String(laKey || fmtLaKey(getReferenceDate()));
+  const weekStart = getOriginalSinWeekStartLaKeyForLaKey(baseLaKey);
+  const sundayNoon = laNoonDateFromKey(weekStart);
+  if (!sundayNoon) return [baseLaKey];
   const out = [];
   for (let i = 0; i < 7; i++) out.push(fmtLaKey(new Date(sundayNoon.getTime() + i * MS_PER_DAY)));
   return Array.from(new Set(out.filter(isLaKey)));
 }
+function getOriginalSinWeekRecord(rs, weekStartLaKey, create = false) {
+  if (!isPlainObject(rs)) return null;
+  const weekKey = String(weekStartLaKey || "");
+  if (!isLaKey(weekKey)) return null;
+  if (!isPlainObject(rs.__originalSinWeeks)) {
+    if (!create) return null;
+    rs.__originalSinWeeks = {};
+  }
+  if (!isPlainObject(rs.__originalSinWeeks[weekKey])) {
+    if (!create) return null;
+    rs.__originalSinWeeks[weekKey] = { weekDone: false };
+  }
+  return rs.__originalSinWeeks[weekKey];
+}
 function getOriginalSinStateForLaKey(laKey, settings, runState) {
   const st = settings || loadSettings();
   const rs = runState || loadRunState(st);
-  const day = getDayState(rs, String(laKey || fmtLaKey(getEffectiveNow(getReferenceDate(), st))), st);
+  const key = String(laKey || fmtLaKey(getEffectiveNow(getReferenceDate(), st)));
+  const weekStart = getOriginalSinWeekStartLaKeyForLaKey(key);
+  const weekRecord = getOriginalSinWeekRecord(rs, weekStart, false);
+  if (weekRecord && typeof weekRecord.weekDone === "boolean") {
+    const day = getDayState(rs, key, st);
+    const ts = ensureTypeState(day, "originalSin");
+    ts.weekDone = !!weekRecord.weekDone;
+    if (weekRecord.weekDoneAt) ts.weekDoneAt = weekRecord.weekDoneAt;
+    else delete ts.weekDoneAt;
+    return { done: !!weekRecord.weekDone, day, ts, weekStart, weekRecord };
+  }
+  const weekLaKeys = getOriginalSinWeekLaKeysForLaKey(key);
+  let inheritedDone = false;
+  let inheritedDoneAt = null;
+  for (const wk of weekLaKeys) {
+    const d = getDayState(rs, wk, st);
+    const t = ensureTypeState(d, "originalSin");
+    if (t.weekDone) {
+      inheritedDone = true;
+      if (t.weekDoneAt && (!inheritedDoneAt || String(t.weekDoneAt) > String(inheritedDoneAt))) inheritedDoneAt = t.weekDoneAt;
+    }
+  }
+  const day = getDayState(rs, key, st);
   const ts = ensureTypeState(day, "originalSin");
-  return { done: !!ts.weekDone, day, ts };
+  if (inheritedDone) {
+    ts.weekDone = true;
+    if (inheritedDoneAt) ts.weekDoneAt = inheritedDoneAt;
+  }
+  return { done: !!ts.weekDone, day, ts, weekStart, weekRecord: null };
 }
 function setOriginalSinWeekDone(targetNow, settings, isDone) {
   const st = settings || loadSettings();
   const current = getReferenceDate(targetNow);
   const rs = loadRunState(st);
   const laKeys = getOriginalSinWeekLaKeys(current, st);
+  const weekStart = getOriginalSinWeekStartLaKeyForLaKey(laKeys[0] || fmtLaKey(getEffectiveNow(current, st)));
+  const weekRecord = getOriginalSinWeekRecord(rs, weekStart, true);
+  if (weekRecord) {
+    weekRecord.weekDone = !!isDone;
+    if (isDone) weekRecord.weekDoneAt = current.toISOString();
+    else delete weekRecord.weekDoneAt;
+  }
   for (const laKey of laKeys) {
     const day = getDayState(rs, laKey, st);
     const ts = ensureTypeState(day, "originalSin");

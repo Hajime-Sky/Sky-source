@@ -6,8 +6,8 @@
     "sha256": "621450659e3565403f133d5a4fc8280c4f67313b7c02ca3e157c5ecda2629b3d",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.17_originalsin_impl2_dynfix18",
-  "generatedAt": "2026-04-22T12:21:25.115Z",
+  "sourceVersion": "v2.18_originalsin_weekstate_fix",
+  "generatedAt": "2026-05-01T06:22:59.283+09:00",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -42,7 +42,7 @@
       "file": "003b_recurring_events_and_pan.js",
       "role": "Recurring event collectors, pan/forest advance logic, and completion markers.",
       "sourceLines": "1279-1657",
-      "sha256": "c9cacb3a092fd9470cb80cfc90b2567c6dd15785dbea97ff53fb60ff7fabe4f3",
+      "sha256": "e52f7589c62ab7969cc5e4f626e33c342dec7765d3fcafe289804f7c409cf804",
       "url": ""
     },
     {
@@ -63,7 +63,7 @@
       "file": "003e_scheduler_state.js",
       "role": "Settings change planning, schedule cache keys, run-state merge, and notification scheduling.",
       "sourceLines": "2151-2479",
-      "sha256": "e59fbf7e5ba166a0ebafd3a1c9a390b4f6c02bb0ff8c38597f938be989afd3ec",
+      "sha256": "472fb28be65e83687b75b3031344fe70da7dcb78de2b5e836294b428c12a7dc3",
       "url": ""
     },
     {

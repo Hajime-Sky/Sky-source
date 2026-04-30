@@ -95,9 +95,9 @@ function buildScheduleCacheKey(type, laKey, settings) {
   if (String(type || "") === "originalSin") {
     try {
       const rs = loadRunState(st);
-      const day = getDayState(rs, String(laKey || ""), st);
-      const ts = ensureTypeState(day, "originalSin");
-      signature.weekDone = !!ts.weekDone;
+      const state = getOriginalSinStateForLaKey(String(laKey || ""), st, rs);
+      signature.weekStart = String(state?.weekStart || "");
+      signature.weekDone = !!state?.done;
     } catch (_) {}
   }
   return `sched:${type}:${laKey}:${hashStringForCache(JSON.stringify(signature))}`;
@@ -158,6 +158,15 @@ function pruneRunStateDays(rs, keepDays=3, anchorLaKeys=[]) {
   for (const item of scored) {
     if (mustKeep.size >= need) break;
     mustKeep.add(item.k);
+  }
+  if (isPlainObject(rs?.__originalSinWeeks)) {
+    const weekKeys = Object.keys(rs.__originalSinWeeks).filter(isLaKey).sort();
+    const anchorWeeks = new Set(anchors.map(k => getOriginalSinWeekStartLaKeyForLaKey(k)).filter(isLaKey));
+    const keepWeeks = new Set(Array.from(anchorWeeks));
+    for (const k of weekKeys.slice(-4)) keepWeeks.add(k);
+    for (const k of weekKeys) {
+      if (!keepWeeks.has(k)) delete rs.__originalSinWeeks[k];
+    }
   }
   return { keys, toDrop: keys.filter(k => !mustKeep.has(k)) };
 }

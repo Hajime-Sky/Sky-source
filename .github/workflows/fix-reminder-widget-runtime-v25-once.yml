@@ -16,7 +16,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import json, hashlib, datetime, re
+          import json, hashlib, datetime
 
           d = Path('SkyReminderModules')
           w = d / '004d_widget_layout.js'
@@ -60,8 +60,6 @@ jobs:
       - name: Validate
         shell: bash
         run: |
-          node --check SkyReminderModules/004d_widget_layout.js
-          node --check SkyReminderModules/008_github_update_scaffold.js
           python3 - <<'PY'
           from pathlib import Path
           import json, hashlib

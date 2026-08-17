@@ -790,7 +790,7 @@ function renderWidgetImageWithDate(image, family, dateText) {
     const textRect = new Rect(
       drawX,
       textY,
-      imageWidth,
+      canvasWidth,
       Math.floor(68 * scale)
     );
     ctx.setTextAlignedCenter();

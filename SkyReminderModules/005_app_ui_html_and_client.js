@@ -290,10 +290,6 @@ const COMMON_SETTING_SPECS = Object.freeze([
     key: "layoutMode", label: "レイアウト", rowId: "row-layout", segmentedId: "seg-layout", segmentedClass: "segmented",
     options: [{ value: "normal", label: "通常" }, { value: "expanded", label: "拡大" }, { value: "signal", label: "シグナル" }],
   }),
-  Object.freeze({
-    key: "theme", label: "テーマ", segmentedId: "seg-theme", segmentedClass: "segmented narrow",
-    options: [{ value: "light", label: "ライト" }, { value: "dark", label: "ダーク" }],
-  }),
 ]);
 function buildCommonSettingsHtml(st) {
   return COMMON_SETTING_SPECS.map(spec => {

@@ -1,0 +1,72 @@
+name: Restore post-app widget refresh
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch widget refresh
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, hashlib, datetime
+
+          def replace_once(path, old, new, label):
+              s = path.read_text(encoding='utf-8')
+              if old not in s:
+                  raise SystemExit('marker missing: ' + label)
+              path.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          reminder = Path('SkyReminderModules/007_shortcut_entrypoint.js')
+          replace_once(reminder,
+              '} else if (config.runsInApp) {\n  await runApp(now);\n} else {',
+              '} else if (config.runsInApp) {\n  await runApp(now);\n  try {\n    const refreshSettings = loadSettings();\n    const refreshNow = getEffectiveNow(new Date(), refreshSettings);\n    await runWidget(refreshNow);\n  } catch (e) {\n    try { console.error("Post-app widget refresh failed:", e); } catch (_) {}\n  }\n} else {',
+              'reminder post-app refresh')
+
+          candle = Path('Sky_今日の大キャン案内.js')
+          replace_once(candle,
+              '} else if (config.runsInApp) {\n  await presentApp();\n  Script.complete();\n} else {',
+              '} else if (config.runsInApp) {\n  await presentApp();\n  try {\n    const widget = await createWidget();\n    Script.setWidget(widget);\n  } catch (e) {\n    try { console.error("Post-app widget refresh failed:", e); } catch (_) {}\n  }\n  Script.complete();\n} else {',
+              'candle post-app refresh')
+
+          mp = Path('SkyReminderModules/manifest.json')
+          m = json.loads(mp.read_text(encoding='utf-8'))
+          for ent in m.get('parts', []):
+              if isinstance(ent, dict) and ent.get('file'):
+                  p = Path('SkyReminderModules') / ent['file']
+                  ent['sha256'] = hashlib.sha256(p.read_bytes()).hexdigest()
+          m['sourceVersion'] = 'v2.22_post_app_widget_refresh'
+          m['generatedAt'] = datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z')
+          mp.write_text(json.dumps(m, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Validate
+        shell: bash
+        run: |
+          node --check Sky_今日の大キャン案内.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, hashlib
+          d=Path('SkyReminderModules')
+          m=json.loads((d/'manifest.json').read_text(encoding='utf-8'))
+          for ent in m['parts']:
+              p=d/ent['file']
+              if hashlib.sha256(p.read_bytes()).hexdigest()!=ent['sha256']:
+                  raise SystemExit('hash mismatch: '+ent['file'])
+          Path('/tmp/reminder-bundle.js').write_text('(async()=>{\n'+'\n'.join((d/e['file']).read_text(encoding='utf-8') for e in m['parts'])+'\n})();', encoding='utf-8')
+          PY
+          node --check /tmp/reminder-bundle.js
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SkyReminderModules/007_shortcut_entrypoint.js SkyReminderModules/manifest.json Sky_今日の大キャン案内.js
+          git commit -m "Refresh Sky widgets after app close"
+          git push origin main

@@ -1,0 +1,49 @@
+name: Apply widget refresh diagnostics
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply patch
+        run: python3 .github/scripts/patch-widget-refresh-diagnostics.py
+      - name: Validate
+        shell: bash
+        run: |
+          node --check Sky_星の子リマインダー.js
+          node --check Sky_今日の大キャン案内.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, hashlib
+          d=Path('SkyReminderModules')
+          m=json.loads((d/'manifest.json').read_text(encoding='utf-8'))
+          for ent in m['parts']:
+              p=d/ent['file']
+              got=hashlib.sha256(p.read_bytes()).hexdigest()
+              if got != ent['sha256']:
+                  raise SystemExit(f'hash mismatch {ent["file"]}: {got} != {ent["sha256"]}')
+          root=Path('Sky_星の子リマインダー.js')
+          if hashlib.sha256(root.read_bytes()).hexdigest() != m['mainScriptFile']['sha256']:
+              raise SystemExit('main script hash mismatch')
+          Path('/tmp/reminder-bundle.js').write_text('(async()=>{\n'+'\n'.join((d/e['file']).read_text(encoding='utf-8') for e in m['parts'])+'\n})();',encoding='utf-8')
+          assert m['sourceVersion']=='v2.23_widget_refresh_diagnostics'
+          PY
+          node --check /tmp/reminder-bundle.js
+          grep -q 'refreshAfterDate' SkyReminderModules/004d_widget_layout.js
+          grep -q 'widget-timeline' SkyReminderModules/007_shortcut_entrypoint.js
+          grep -q 'HajimeSkyTools/_chatgpt-debug/widget-refresh' Sky_星の子リマインダー.js
+          grep -q 'HajimeSkyTools/_chatgpt-debug/widget-refresh' Sky_今日の大キャン案内.js
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Sky_星の子リマインダー.js Sky_今日の大キャン案内.js SkyReminderModules/004d_widget_layout.js SkyReminderModules/007_shortcut_entrypoint.js SkyReminderModules/manifest.json
+          git commit -m "Add widget refresh diagnostics and retry schedule"
+          git push origin main

@@ -1,0 +1,57 @@
+name: Finalize Sky reminder fix
+on:
+  push:
+    paths:
+      - .github/workflows/finalize-sky-reminder-once.yml
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply and validate
+        shell: bash
+        run: |
+          git apply --whitespace=nowarn .github/star-reminder-update.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          import datetime, hashlib, json, unicodedata
+          root=Path('.')
+          def findn(rel):
+              t=unicodedata.normalize('NFC',rel)
+              for p in root.rglob('*'):
+                  if p.is_file() and unicodedata.normalize('NFC',str(p.relative_to(root)))==t: return p
+              raise SystemExit(rel)
+          mp=Path('SkyReminderModules/manifest.json'); m=json.loads(mp.read_text(encoding='utf-8'))
+          for part in m.get('parts',[]):
+              if part.get('file'):
+                  p=mp.parent/part['file']; part['sha256']=hashlib.sha256(p.read_bytes()).hexdigest()
+          main=m.get('mainScriptFile') or {}; mainp=findn('Sky_星の子リマインダー.js')
+          main['sha256']=hashlib.sha256(mainp.read_bytes()).hexdigest(); m['mainScriptFile']=main
+          m['sourceVersion']='v2.18_update_integrity_fix'
+          m['generatedAt']=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).isoformat(timespec='seconds')
+          mp.write_text(json.dumps(m,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(mainp)
+          PY
+          MAIN="$(python3 - <<'PY'
+          from pathlib import Path
+          import unicodedata
+          t=unicodedata.normalize('NFC','Sky_星の子リマインダー.js')
+          for p in Path('.').iterdir():
+              if p.is_file() and unicodedata.normalize('NFC',p.name)==t: print(p); break
+          PY
+          )"
+          node --check "$MAIN"
+          node --check SkyReminderModules/008_github_update_scaffold.js
+      - name: Commit to main
+        shell: bash
+        run: |
+          rm -f .github/star-reminder-update.patch .github/workflows/finalize-sky-reminder-once.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Fix Sky reminder update integrity"
+          git push origin HEAD:main

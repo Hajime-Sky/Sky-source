@@ -187,6 +187,58 @@ const handleOpenOnlyTapAction = async (obj, defaultAction) => {
       return;
     }
     const act = String(obj.action || "").toLowerCase();
+    if (act === "commonreloadimages") {
+      let failed = [];
+      try {
+        const fm = getStorageFileManager();
+        try { safeRemoveKeychainKey(CACHE_KEY, false); } catch (_) {}
+        try { Store.clear(CACHE_KEY); } catch (_) {}
+        const dir = getImagesDir(fm);
+        if (fm.fileExists(dir)) { try { fm.remove(dir); } catch (_) {} }
+        const results = await syncAllConstellationImages(CONSTELLATION_REALMS, fm);
+        failed = (results || []).filter(x => !x || x.ok !== true);
+        const alert = new Alert();
+        alert.title = failed.length ? "画像の再取得に一部失敗" : "画像を再取得しました";
+        alert.message = failed.length ? failed.map(x => String(x?.realm || "?")).join(", ") : "星座画像を更新しました。";
+        alert.addAction("OK");
+        await alert.presentAlert();
+        emit({ ok: failed.length === 0, mode: act, failed: failed.map(x => String(x?.realm || "?")) });
+      } catch (e) {
+        const alert = new Alert();
+        alert.title = "画像の再取得に失敗しました";
+        alert.message = String(e && e.message || e);
+        alert.addAction("OK");
+        await alert.presentAlert();
+        emit({ ok:false, mode:act, error:String(e && e.message || e) });
+      }
+      return;
+    }
+    if (act === "commongithubupdate") {
+      try {
+        const before = skyReminderReadSettings();
+        const beforeAt = Number(before?.githubUpdate?.lastUpdatedAtMs || 0) || 0;
+        await skyReminderManualGithubUpdateAndRestart();
+        const after = skyReminderReadSettings();
+        const afterAt = Number(after?.githubUpdate?.lastUpdatedAtMs || 0) || 0;
+        const status = String(after?.githubUpdate?.lastUpdateStatus || "");
+        const updated = afterAt > beforeAt;
+        const alert = new Alert();
+        alert.title = updated ? "更新しました" : (status.startsWith("error:") ? "更新に失敗しました" : "更新はありません");
+        alert.message = status || (updated ? "更新済み" : "no-update");
+        alert.addAction("OK");
+        await alert.presentAlert();
+        emit({ ok:!status.startsWith("error:"), mode:act, updated, status });
+        if (updated && typeof skyReminderRestartScript === "function") skyReminderRestartScript();
+      } catch (e) {
+        const alert = new Alert();
+        alert.title = "GitHub更新に失敗しました";
+        alert.message = String(e && e.message || e);
+        alert.addAction("OK");
+        await alert.presentAlert();
+        emit({ ok:false, mode:act, error:String(e && e.message || e) });
+      }
+      return;
+    }
     const h = SHORTCUT_HANDLERS[act];
     if (h) { await h(obj); return; }
   }
@@ -243,6 +295,12 @@ if (_initSettings.imageAutoFetchEnabled !== false) {
   } catch (e) {
     try { console.error(`Failed to auto sync constellation images: ${e}`); } catch (_) {}
     try {
+      try {
+        const commonModule = importModule("HajimeSkyTools/common-settings");
+        const common = commonModule.load();
+        common.images = { ...(common.images || {}), autoFetchEnabled: false };
+        commonModule.save(common);
+      } catch (_) {}
       const st = loadSettings();
       st.imageAutoFetchEnabled = false;
       saveSettings(st);

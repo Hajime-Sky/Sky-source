@@ -2486,28 +2486,12 @@ const html = `
         <div class="screen-title-wrap"><h2>システムとデータ</h2></div>
         <button class="help-entry-btn" onclick="openHelp('data')">この画面の使い方 (?)</button>
       </div>
-      <div class="screen-subnote">本番 / テストの状態、保存データ、危険操作を混ぜずに確認できるよう整理しています。</div>
+      <div class="screen-subnote">共通設定、通知プリセット、削除・初期化を役割ごとに分けています。</div>
       <div class="section system-card">
         <h3>Sky共通設定</h3>
-        <div class="rule-subnote">時差、地方の上書き、GitHub更新頻度、バックアップ保存先はSky系アプリで共通管理します。</div>
+        <div class="rule-subnote">システム設定と保守操作はSky共通設定で管理します。通知プリセットとデータ削除だけこの画面に残します。</div>
         <div class="system-stack-actions" style="margin-top:12px;">
           <div class="btn secondary" onclick="sendCommand('scriptable-opencommonsettings://1', this)">Sky共通設定を開く</div>
-        </div>
-      </div>
-      <div class="section zone-virtual system-card">
-        <div class="card-header system-card-header-split">
-          <span>タイムトラベル（テストモード）</span>
-          ${renderToggleHtml(settings.testMode, `setTestMode(true, this)`, `setTestMode(false, this)`, "オン", "オフ")}
-        </div>
-        <div id="test-mode-row" class="system-expand-stack" style="display:${settings.testMode ? 'block' : 'none'}; margin-top:12px;">
-          <div class="form-row system-virtual-row">
-            <span class="form-label">トラベル先の時間</span>
-            <input class="input-datetime system-datetime-input" style="width:180px;" type="datetime-local" id="test-time-input" value="${initialTestTimeStr}" ${settings.testMode ? '' : 'disabled'} onchange="applyTestTimeAuto(this)">
-          </div>
-        </div>
-        <div class="rule-subnote" style="margin-top:12px;">
-          ※時間を進めると、アプリの中の時間もすぐに進みます。<br>
-          ※「オフ」に戻すと、現実の空（いまの時間）に戻ります。
         </div>
       </div>
       <div class="section system-card">
@@ -2521,53 +2505,22 @@ const html = `
         </div>
       </div>
       <div class="section system-card">
-        <h3>画像の管理</h3>
-        <div class="system-stack-actions">
-          <div class="btn secondary del-btn" id="clearAndReloadImages">画像を新しく読み込みなおす</div>
-          <div class="btn danger del-btn" onclick="confirmDelete('IMAGES', '画像キャッシュ', this)">画像の保存データを整理</div>
-        </div>
-        <div class="rule-subnote" style="margin-top:12px;">${settings.imageAutoFetchEnabled === false ? '前回の画像取得に失敗したため、自動画像取得は停止中です。必要なときだけ上の読み込みボタンで再実行します。' : '画像が不足しているときは、起動時に自動で取得します。失敗した場合は自動取得を停止し、手動読み込みだけに切り替えます。'} </div>
+      <h3>画像の管理</h3>
+      <div class="rule-subnote">画像の再取得はSky共通設定へ移動しました。ここでは画像の保存データ削除だけ行えます。</div>
+      <div class="system-stack-actions">
+        <div class="btn danger del-btn" onclick="confirmDelete('IMAGES', '画像キャッシュ', this)">画像の保存データを整理</div>
       </div>
+    </div>
       <div class="section system-card">
-        <h3>GitHubアップデート</h3>
-        <div class="rule-subnote">起動時にGitHub上の分割ファイルを確認し、更新があればScriptable内のフォルダに保存してから実行します。</div>
-        <div class="rule-subnote" style="margin-top:12px;">更新タイミングはSky共通設定で管理します。現在: ${settings.githubUpdate?.policy === 'none' ? '更新しない' : settings.githubUpdate?.policy === 'always' ? '毎回' : '24時間'}</div>
-        <div class="system-stack-actions" style="margin-top:12px;">
-          <div class="btn secondary" data-action="github-update-now" onclick="runGithubUpdateNow(this)">今すぐ更新</div>
-        </div>
-        <div class="form-row" style="margin-top:12px; align-items:stretch; flex-direction:column;">
-          <span class="form-label">GitHub manifest URL</span>
-          <input class="input-text" style="width:100%; box-sizing:border-box;" type="url" value="${escapeHtml(settings.githubUpdate?.remoteManifestUrl || 'https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json')}" onchange="handleSettingChange('githubUpdate.remoteManifestUrl', this.value, this)">
-        </div>
-        <div class="rule-subnote" style="margin-top:12px;">最終確認: ${settings.githubUpdate?.lastCheckedAtMs ? F.localFullFormat(new Date(Number(settings.githubUpdate.lastCheckedAtMs)), settings) : '未実行'} / 状態: ${escapeHtml(settings.githubUpdate?.lastUpdateStatus || '未実行')}</div>
+      <h3>データの管理</h3>
+      <div class="rule-subnote">特定の保存データだけ消したいときは、下のボタンから個別に整理できます。</div>
+      <div class="system-action-grid" style="margin-top:12px;">
+        <div class="btn danger del-btn" onclick="confirmDelete('${KEYCHAIN_KEY}', '設定データ', this)">設定データ</div>
+        <div class="btn danger del-btn" onclick="confirmDelete('RUNSTATE', '完了状態', this)">完了状態</div>
+        <div class="btn danger del-btn" onclick="confirmDelete('${getDisabledNotiKey(settings)}', 'オフリスト', this)">オフリスト</div>
+        <div class="btn danger del-btn" onclick="confirmDelete('${CACHE_KEY}', 'キャッシュ', this)">キャッシュ</div>
       </div>
-      <div class="section system-card">
-        <h3>設定のインポート / エクスポート</h3>
-        <div class="rule-subnote">画像以外の保存データを丸ごとバックアップします。読み込みは選択中の保存先にある最新バックアップを使い、データを書き換えたあと通常実行と同じように再スケジューリングします。</div>
-        <div class="rule-subnote" style="margin-top:12px;">保存先はSky共通設定で変更できます。</div>
-        <div class="rule-subnote" id="settings-backup-path-note" style="margin-top:12px;">現在の保存先: ${settings.backupStorageMode === 'local' ? 'local' : 'iCloud'} / ${SETTINGS_BACKUP_DIRNAME}</div>
-        <div class="btnrow system-copy-row" style="flex-wrap:wrap; gap:8px; margin-top:12px;">
-          <div class="btn small del-btn" style="flex:1;" onclick="sendCommand('scriptable-settingsexport://', this)">バックアップを書き出す</div>
-          <div class="btn small secondary" style="flex:1; margin-top:0;" onclick="sendCommand('scriptable-settingsimport://', this)">最新バックアップを読み込む</div>
-        </div>
-      </div>
-      <div class="section system-card">
-        <h3>データの管理</h3>
-        <div class="minirow">
-          <div class="label">アプリの動きを軽くする(一時保存)</div>
-          ${renderToggleHtml(settings.useCache !== false, "handleSettingChange('useCache', true, this)", "handleSettingChange('useCache', false, this)", "オン", "オフ")}
-        </div>
-        <div class="rule-subnote" style="margin-top:12px;">特定のデータだけ消したいときは、下のボタンから個別に整理できます。</div>
-        <div class="system-action-grid" style="margin-top:12px;">
-          <div class="btn danger del-btn" onclick="confirmDelete('${KEYCHAIN_KEY}', '設定データ', this)">設定データ</div>
-          <div class="btn danger del-btn" onclick="confirmDelete('RUNSTATE', '完了状態', this)">完了状態</div>
-          <div class="btn danger del-btn" onclick="confirmDelete('${getDisabledNotiKey(settings)}', 'オフリスト', this)">オフリスト</div>
-          <div class="btn danger del-btn" onclick="confirmDelete('${CACHE_KEY}', 'キャッシュ', this)">キャッシュ</div>
-        </div>
-        <div class="btnrow system-copy-row" style="flex-wrap:wrap; gap:8px; margin-top:12px;">
-          <div class="btn small secondary" id="btn-copyhtml" style="flex: 1 1 100%; margin-top:0;" onclick="sendCommand('scriptable-htmlcopy://', this)">現在のHTMLを書き出す</div>
-        </div>
-      </div>
+    </div>
       <div class="section zone-destructive system-card">
         <h3>[危険] データの初期化</h3>
         <div class="danger-note">これらの操作は元に戻せません。進行状況のリセットと全削除を分けて置いています。</div>
@@ -4221,6 +4174,27 @@ function save(el) {
     safeEvalJsWithGen(`if (typeof renderManageNotifications === 'function') { renderManageNotifications(${payloadJson}); }`, currentGen);
   }
   await wv.loadHTML(html, "https://localhost/");
+  if (String(qp.commonAction || "") === "exportHtml") {
+    try {
+      const st = loadSettings();
+      const fm = getSettingsBackupFileManager(st);
+      const dir = getSettingsBackupDir(st, fm);
+      const path = fm.joinPath(dir, buildHtmlDumpFilename(new Date()));
+      fm.writeString(path, String(html || ""));
+      const alert = new Alert();
+      alert.title = "HTMLを書き出しました";
+      alert.message = String(path).split("/").pop() + " (" + getSettingsBackupDirLabel(st) + ")";
+      alert.addAction("OK");
+      await alert.presentAlert();
+    } catch (e) {
+      const alert = new Alert();
+      alert.title = "HTML書き出しに失敗しました";
+      alert.message = String(e && e.message || e);
+      alert.addAction("OK");
+      await alert.presentAlert();
+    }
+    return;
+  }
   const _safeEvalJS = (js) => { try { wv.evaluateJavaScript(String(js || "")); } catch (_) {} };
   let __scriptableUiUpdateGen = 0;
   const nextUiUpdateGen = () => {

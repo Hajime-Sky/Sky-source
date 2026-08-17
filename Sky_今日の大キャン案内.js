@@ -23,6 +23,16 @@ try { SKY_COMMON_SETTINGS = importModule("HajimeSkyTools/common-settings"); } ca
 function readSkyCommonSettingsSafe() {
   try { return SKY_COMMON_SETTINGS && typeof SKY_COMMON_SETTINGS.load === "function" ? SKY_COMMON_SETTINGS.load() : null; } catch (_) { return null; }
 }
+function getSkyCommonNow(reference = new Date()) {
+    try {
+      if (SKY_COMMON_SETTINGS && typeof SKY_COMMON_SETTINGS.effectiveDate === "function") return SKY_COMMON_SETTINGS.effectiveDate(reference);
+    } catch (_) {}
+    return reference instanceof Date ? reference : new Date(reference);
+  }
+  function commonImageAutoFetchEnabled() {
+    const common = readSkyCommonSettingsSafe();
+    return !(common && common.images && common.images.autoFetchEnabled === false);
+  }
 function openSkyCommonSettings() {
   try {
     if (SKY_COMMON_SETTINGS && typeof SKY_COMMON_SETTINGS.open === "function") SKY_COMMON_SETTINGS.open();
@@ -385,7 +395,7 @@ function calcByServerDate(serverDate, targetSkyYMD) {
     }
   };
 }
-function calcForCurrentLATime(dateObj = new Date()) {
+function calcForCurrentLATime(dateObj = getSkyCommonNow()) {
   const ctx = getCurrentSkyContext(dateObj);
   const result = calcByServerDate(ctx.serverDate, ctx.skyYMD);
   return {
@@ -991,7 +1001,7 @@ async function runManualUpdateAndMaybeRestart() {
 }
 async function presentApp() {
   const initialMeta = readCacheMeta();
-  if (!isCacheUsable(initialMeta) || needsQualityRefresh(initialMeta)) {
+  if (commonImageAutoFetchEnabled() && (!isCacheUsable(initialMeta) || needsQualityRefresh(initialMeta))) {
     await runSyncAndReport();
   }
   while (true) {
@@ -1042,7 +1052,14 @@ const didUpdateScript = await updateScriptFromGitHubIfNeeded(false);
 if (didUpdateScript) {
   console.log("GitHub update applied. It will take effect on the next run.");
 }
-if (config.runsInWidget) {
+const __commonAction = String(args?.queryParameters?.commonAction || "");
+  if (__commonAction === "githubUpdate") {
+    await runManualUpdateAndMaybeRestart();
+    Script.complete();
+  } else if (__commonAction === "reloadImages") {
+    await runSyncAndReport();
+    Script.complete();
+  } else if (config.runsInWidget) {
   const widget = await createWidget();
   Script.setWidget(widget);
   Script.complete();
@@ -1050,7 +1067,7 @@ if (config.runsInWidget) {
   await presentApp();
   Script.complete();
 } else {
-  const now = new Date();
+  const now = getSkyCommonNow();
   await notifyIfCalledOutsideLaMidnight(now);
   const meta = readCacheMeta();
   if (!isCacheUsable(meta) || needsQualityRefresh(meta)) {

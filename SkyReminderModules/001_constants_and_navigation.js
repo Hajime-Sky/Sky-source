@@ -89,7 +89,7 @@ const NAV_SCREEN_DEFS = Object.freeze([
   Object.freeze({
     id: "data",
     label: "システム",
-    helpText: `<h4 style='color:var(--color-primary); margin-top:0;'>⚙️ システムとデータ</h4><p style='line-height:1.6;'>「タイムトラベル(おためしモード)」をオンにして時間を進めると、<b>未来のお知らせがちゃんと来るか今すぐテスト</b>できます。</p><ul style='padding-left: 20px; line-height:1.6; margin-bottom:12px;'><li>設定がうまくできたか不安な時、わざわざイベントの時間まで待たなくても大丈夫！どんな風にスマホにお知らせが届くか確認してみましょう。<br><span style='font-size:0.9em; opacity:0.8;'>※テストが終わったら必ず「オフ」にして、現実のお空に戻ってきてね🕊️</span></li><li><b>危険な操作：</b>画面の一番下にある赤い枠のボタンは、今までの記録をすべて消してしまう魔法です。普段は触らなくて大丈夫ですよ。</li></ul>${buildYouTubeEmbedHtml(HELP_VIDEO_IDS.data, "システムの操作動画")}`,
+    helpText: `<h4 style='color:var(--color-primary); margin-top:0;'>⚙️ システムとデータ</h4><p style='line-height:1.6;'>Sky系で共通化できる設定と保守操作は<b>Sky共通設定</b>にまとめています。この画面には通知プリセットと、このアプリ固有データの削除・初期化だけを残しています。</p><ul style='padding-left:20px; line-height:1.6; margin-bottom:12px;'><li><b>Sky共通設定：</b>時刻、タイムトラベル、地方上書き、キャッシュ、画像取得、更新、バックアップを管理します。</li><li><b>通知プリセット：</b>星の子リマインダー固有の通知構成だけを一括変更します。</li><li><b>削除・初期化：</b>このアプリの保存データを消す操作なので、この画面に残しています。</li></ul>${buildYouTubeEmbedHtml(HELP_VIDEO_IDS.data, "システムの操作動画")}`,
   }),
   Object.freeze({
     id: "intro",

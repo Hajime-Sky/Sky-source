@@ -248,14 +248,24 @@ function skyReminderMarkMigrationApplied(id) {
 }
 
 function skyReminderGetUpdateConfig(manifest) {
-  const st = skyReminderReadSettings();
-  const cfg = st.githubUpdate && typeof st.githubUpdate === "object" ? st.githubUpdate : {};
-  const mfUpdate = manifest && manifest.update && typeof manifest.update === "object" ? manifest.update : {};
-  const remoteManifestUrl = String(cfg.remoteManifestUrl || mfUpdate.remoteManifestUrl || SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL).trim();
-  const policy = ["none", "daily", "always"].includes(String(cfg.policy || "")) ? String(cfg.policy) : "daily";
-  const lastCheckedAtMs = Number(cfg.lastCheckedAtMs || 0) || 0;
-  return { remoteManifestUrl, policy, lastCheckedAtMs };
-}
+    const st = skyReminderReadSettings();
+    const cfg = st.githubUpdate && typeof st.githubUpdate === "object" ? st.githubUpdate : {};
+    const mfUpdate = manifest && manifest.update && typeof manifest.update === "object" ? manifest.update : {};
+    let commonGithub = null;
+    try {
+      const commonModule = importModule("HajimeSkyTools/common-settings");
+      const common = commonModule && typeof commonModule.load === "function" ? commonModule.load() : null;
+      if (common && common.github && typeof common.github === "object") commonGithub = common.github;
+    } catch (_) {}
+    const remoteManifestUrl = String(commonGithub?.starReminderManifestUrl || cfg.remoteManifestUrl || mfUpdate.remoteManifestUrl || SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL).trim();
+    const commonPolicy = String(commonGithub?.updatePolicy || "");
+    const localPolicy = String(cfg.policy || "");
+    const policy = ["none", "daily", "always"].includes(commonPolicy)
+      ? commonPolicy
+      : (["none", "daily", "always"].includes(localPolicy) ? localPolicy : "daily");
+    const lastCheckedAtMs = Number(cfg.lastCheckedAtMs || 0) || 0;
+    return { remoteManifestUrl, policy, lastCheckedAtMs };
+  }
 
 async function skyReminderLoadManifest(fm, moduleDir) {
   const manifestPath = fm.joinPath(moduleDir, SKY_REMINDER_MANIFEST);

@@ -3,11 +3,11 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "621450659e3565403f133d5a4fc8280c4f67313b7c02ca3e157c5ecda2629b3d",
+    "sha256": "3901c1f2524979b531364ab52bc6225ff31858c4c03a3886e8b3801bd1ee73a2",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.18_originalsin_weekstate_fix",
-  "generatedAt": "2026-05-01T06:22:59.283+09:00",
+  "sourceVersion": "v2.18_update_integrity_fix",
+  "generatedAt": "2026-08-17T13:02:05+09:00",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -21,56 +21,56 @@
       "file": "001_constants_and_navigation.js",
       "role": "Constants, action ids, navigation definitions, drawing defaults, and small shared helpers.",
       "sourceLines": "4-229",
-      "sha256": "81d5c2b40d94c51fe5f5b496da5f477e2105c0de17668261495b43c8b9741d1c",
+      "sha256": "80b3df26caba3ec795d07115284daf09e7a48fb346e55cd22982d7ffe9a5671f",
       "url": ""
     },
     {
       "file": "002_settings_store_and_cache.js",
       "role": "Notification id helpers, default settings, normalization, keychain store, cache, and settings persistence.",
       "sourceLines": "230-936",
-      "sha256": "f3208200824fdbb7964f21c3e5538e96c206d01f64605c5858ef029a1bc845cf",
+      "sha256": "f05b9e5d9c24bc8fc1bc0686568706b3ba28cdcaf02fb393fa12741b69a53fbc",
       "url": ""
     },
     {
       "file": "003a_policy_time_and_common.js",
       "role": "Architecture policy, time helpers, common scheduling helpers, and update-time schedules.",
       "sourceLines": "937-1278",
-      "sha256": "8d302c99d14a77ab5cc8b3474dac3447ff36e3a51e918c5274ef064099d2e4c4",
+      "sha256": "4d647be77f7855b4b0d0637f4ada50e68f0dc15e97df945c3400c304ef78467b",
       "url": ""
     },
     {
       "file": "003b_recurring_events_and_pan.js",
       "role": "Recurring event collectors, pan/forest advance logic, and completion markers.",
       "sourceLines": "1279-1657",
-      "sha256": "e52f7589c62ab7969cc5e4f626e33c342dec7765d3fcafe289804f7c409cf804",
+      "sha256": "1835e687c2e036b2e8828abbfb63c49ea4605340e6502738154ef3be98fe7838",
       "url": ""
     },
     {
       "file": "003c_original_sin_and_dye.js",
       "role": "Original Sin completion, idle-window candidate generation, and dye schedules.",
       "sourceLines": "1658-1896",
-      "sha256": "5995cedb50450c69962499374406dda8fdc2d2e6150d261bb971965dc45f1e4f",
+      "sha256": "ebfb5c4920b37c9bf822efebe93aa204e6b4fe6fd27fe1e45373be9562d0d903",
       "url": ""
     },
     {
       "file": "003d_event_registry.js",
       "role": "Provider registry and UI field definitions for event types.",
       "sourceLines": "1897-2150",
-      "sha256": "844036dd32cbc671364ace1d835fd12f33cda8586b02695d0edf2e2c2d5b4abc",
+      "sha256": "8d52f3e50160764a953df06e0cfcd4a061aa558cdf8d2efac9f064c2e1b8cd85",
       "url": ""
     },
     {
       "file": "003e_scheduler_state.js",
       "role": "Settings change planning, schedule cache keys, run-state merge, and notification scheduling.",
       "sourceLines": "2151-2479",
-      "sha256": "472fb28be65e83687b75b3031344fe70da7dcb78de2b5e836294b428c12a7dc3",
+      "sha256": "8ce68714d249864c929508cd5b0af6be4414fe521829070935d4f86a7d4462d2",
       "url": ""
     },
     {
       "file": "004a_tap_and_shard_data.js",
       "role": "Tap handling, shard calculations, and signal source data.",
       "sourceLines": "2457-3061",
-      "sha256": "97ddd8d643eb515ed7c8300fbdfbdd1582cba8fd0b2d89fa76a093a84acc96fe",
+      "sha256": "141493f0020dcd96ef4c43116dc5fc41da03cebc674ea0c6da9adc66c7d987ad",
       "url": ""
     },
     {
@@ -84,42 +84,42 @@
       "file": "004c_draw_modes.js",
       "role": "Clock, list, timeline, and bar canvas drawing modes.",
       "sourceLines": "3181-3768",
-      "sha256": "40ac05e73aba999d68435a6d77c98fd6c9f9b94a8d28388b7200347de2e5e0f4",
+      "sha256": "bd5a8750ef15700fe47797c74afb6756c44d4b33ce355d4f6c7c6bf4a32596f0",
       "url": ""
     },
     {
       "file": "004d_widget_layout.js",
       "role": "Widget layout resolution, image generation dispatch, and preview card HTML.",
       "sourceLines": "3769-3928",
-      "sha256": "a23be589a9c1810ad11d274ab15ef6db81b598537c4ea2f9d2ae2e3004be5a7f",
+      "sha256": "4930b814691c421b964625df65a22160469836a22ea1a9cb91868bcfad7e89cb",
       "url": ""
     },
     {
       "file": "005_app_ui_html_and_client.js",
       "role": "Interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.",
       "sourceLines": "3923-8349",
-      "sha256": "b9ae42329616b8004853cca73872c21db522cc57769ef0e4e9a0107137fbbdc5",
+      "sha256": "fd48d0d901b3860cf7f4762037eb1d6d4166f54ca45344cce39274ecb29898e1",
       "url": ""
     },
     {
       "file": "006_app_actions_backup_and_handlers.js",
       "role": "WebView command handlers, settings export/import, backup file handling, and app-side mutation sync.",
       "sourceLines": "8350-9153",
-      "sha256": "e211db517cf88e681ad9bc3c2b8613f6a5fb9f48e54274fbdde17c5ec1d5a370",
+      "sha256": "9ac6ce992fff96f562e8c9d13497f01a96354a4958c2d1f4ef4494b29dd8eb51",
       "url": ""
     },
     {
       "file": "008_github_update_scaffold.js",
       "role": "GitHub update metadata and manifest-diff planning helpers.",
       "sourceLines": "new",
-      "sha256": "5f7b1d222119250014c8fdaf789eeb1784efe3b0398f4456ef66916b6e856e15",
+      "sha256": "bae3f685cee282deba76d04203cabf33eb7c3b2f65ac79479f3445b7853ec005",
       "url": ""
     },
     {
       "file": "007_shortcut_entrypoint.js",
       "role": "Shortcut/query handling, startup checks, runtime mode dispatch, and Script.complete().",
       "sourceLines": "9154-9417",
-      "sha256": "926f9f8958d68de6c4b51168866dbb15635b381bf272cdb10ec03d841859a2a9",
+      "sha256": "b59d8003ad36680f9917cb540295eaa38af572c69f71354a057f33229af96bbd",
       "url": ""
     }
   ],

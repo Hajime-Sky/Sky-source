@@ -758,11 +758,15 @@ function getWidgetCanvasSpec(family) {
 }
 function renderWidgetImageWithDate(image, family, dateText) {
   const spec = getWidgetCanvasSpec(family);
-  const imageWidth = image.size.width;
-  const imageHeight = image.size.height;
-  if (!(imageWidth > 0) || !(imageHeight > 0)) return image;
-  // 幅合わせ: キャンバスの幅を画像の幅に固定し、高さをウィジェットのアスペクト比に合わせて算出
-  const canvasWidth = imageWidth;
+  const sourceWidth = image.size.width;
+  const sourceHeight = image.size.height;
+  if (!(sourceWidth > 0) || !(sourceHeight > 0)) return image;
+  // ウィジェット実行は2x実表示解像度で合成し、高解像度DrawContextによるメモリ超過を避ける。
+  // アプリ内プレビューは従来どおり元画像解像度を維持する。
+  const widgetTargetWidth = Math.max(340, Math.round(spec.width * 2));
+  const canvasWidth = config.runsInWidget ? Math.min(sourceWidth, widgetTargetWidth) : sourceWidth;
+  const imageScale = canvasWidth / sourceWidth;
+  const scaledImageHeight = Math.max(1, Math.round(sourceHeight * imageScale));
   const canvasHeight = Math.round(canvasWidth * (spec.height / spec.width));
   const ctx = new DrawContext();
   ctx.size = new Size(canvasWidth, canvasHeight);
@@ -773,12 +777,12 @@ function renderWidgetImageWithDate(image, family, dateText) {
   ctx.fillRect(new Rect(0, 0, canvasWidth, canvasHeight));
   // 幅合わせで中央に描画
   const drawX = 0;
-  const drawY = Math.round((canvasHeight - imageHeight) / 2);
-  ctx.drawImageInRect(image, new Rect(drawX, drawY, imageWidth, imageHeight));
+  const drawY = Math.round((canvasHeight - scaledImageHeight) / 2);
+  ctx.drawImageInRect(image, new Rect(drawX, drawY, canvasWidth, scaledImageHeight));
   const text = String(dateText || "").trim();
   if (text) {
     // 日付テキストは元の画像領域（1280）を基準にサイズと位置を決定
-    const scale = imageWidth / 1280;
+    const scale = canvasWidth / 1280;
     const fontSize = Math.max(8, Math.floor(48 * scale));
     // 画像の上端(drawY)を基準に配置
     const textY = drawY + Math.floor(16 * scale);
@@ -894,18 +898,13 @@ async function createWidget(options = {}) {
   candleWidgetDebug("widget-build", { reason: debugReason, family, skyYMD: res.skyYMD, pattern: res.pattern.label, refreshAfter: widget.refreshAfterDate.toISOString() });
   widget.url = URLScheme.forRunningScript();
   widget.backgroundColor = new Color("#000000");
+  candleWidgetDebug("widget-render-start", { reason: debugReason, family, sourceWidth: image.size.width, sourceHeight: image.size.height });
   let bgImage = renderWidgetImageWithDate(image, family, res.skyYMD);
   image = null; // 元画像のメモリを解放
-  try {
-    const fm = FileManager.local();
-    const tempDir = getAppTempDir();
-    const tempPath = fm.joinPath(tempDir, `widget_bg_${family}.png`);
-    fm.writeImage(tempPath, bgImage);
-    bgImage = null; // 合成画像のメモリを解放
-    widget.backgroundImage = Image.fromFile(tempPath);
-  } catch (e) {
-    widget.backgroundImage = bgImage;
-  }
+  candleWidgetDebug("widget-render-complete", { reason: debugReason, family, width: bgImage?.size?.width || 0, height: bgImage?.size?.height || 0 });
+  widget.backgroundImage = bgImage;
+  bgImage = null;
+  candleWidgetDebug("widget-return", { reason: debugReason, family });
   return widget;
 }
 async function showSimpleAlert(title, message) {

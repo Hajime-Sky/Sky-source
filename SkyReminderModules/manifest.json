@@ -3,11 +3,11 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "2bbb18353e76298e7a308a5da80b07cee197d5c1b084b9dffa8bb65a54bb9e63",
+    "sha256": "0d644e38a63b391b9b53fe2242940f38f5fb964ce4ba4d8bf03438bc6803fba7",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.23_widget_refresh_diagnostics",
-  "generatedAt": "2026-08-17T12:05:43.280615Z",
+  "sourceVersion": "v2.24_widget_runtime_fix",
+  "generatedAt": "2026-08-17T12:25:41.448905Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -91,7 +91,7 @@
       "file": "004d_widget_layout.js",
       "role": "Widget layout resolution, image generation dispatch, and preview card HTML.",
       "sourceLines": "3769-3928",
-      "sha256": "9dcdd4070d844da9bd22f72043d15de323cce06be01fc3d16192ac5cca31e624",
+      "sha256": "43aa7c7b7f084f51119d9c98656bc69ea87ca635b554cc625a5f5160763e2b93",
       "url": ""
     },
     {

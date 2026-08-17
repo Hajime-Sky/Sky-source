@@ -11,6 +11,16 @@ const SKY_REMINDER_MANIFEST = "manifest.json";
 const SKY_REMINDER_SETTINGS_KEY = "SKY_SHARDS_SETTINGS";
 const SKY_REMINDER_DEFAULT_REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json";
 const SKY_REMINDER_MAIN_SCRIPT = "Sky_星の子リマインダー.js";
+function skyReminderCurrentScriptName() {
+  try {
+    const name = String(Script.name() || "").trim();
+    if (name) return name;
+  } catch (_) {}
+  return SKY_REMINDER_MAIN_SCRIPT.replace(/\.js$/i, "");
+}
+function skyReminderCurrentMainScriptFilename() {
+  return skyReminderCurrentScriptName() + ".js";
+}
 const SKY_REMINDER_STORAGE_DIR = "HajimeSkyTools/star-reminder/data";
 const SKY_REMINDER_PREVIOUS_STORAGE_DIR = "SkyReminder/data";
 const SKY_REMINDER_LEGACY_STORAGE_DIR = "SkyReminderData";
@@ -516,7 +526,7 @@ function skyReminderBuildRestartUrl() {
       if (url) return url;
     }
   } catch (_) {}
-  return "scriptable:///run?scriptName=" + encodeURIComponent(SKY_REMINDER_MAIN_SCRIPT);
+  return "scriptable:///run?scriptName=" + encodeURIComponent(skyReminderCurrentScriptName());
 }
 
 function skyReminderRestartScript() {
@@ -570,7 +580,7 @@ async function skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, localManifest,
       if (forceSyncAll || !actual || (expected && actual !== expected)) changed.push(part);
     }
     const mainMeta = remoteManifest.mainScriptFile && typeof remoteManifest.mainScriptFile === "object" ? remoteManifest.mainScriptFile : null;
-    const mainPath = fm.joinPath(fm.documentsDirectory(), SKY_REMINDER_MAIN_SCRIPT);
+    const mainPath = fm.joinPath(fm.documentsDirectory(), skyReminderCurrentMainScriptFilename());
     const mainExpected = String(mainMeta?.sha256 || "").trim().toLowerCase();
     const mainActual = mainMeta ? await skyReminderLocalSha256(fm, mainPath) : "";
     const mainHashChanged = Boolean(mainMeta && (forceSyncAll || !mainActual || (mainExpected && mainActual !== mainExpected)));
@@ -616,7 +626,18 @@ async function skyReminderRunFromParts() {
   const moduleDir = skyReminderResolveLocalModuleDirForExistingInstall(fm);
   await skyReminderCopyLegacyManifestIfNeeded(fm, moduleDir);
   let manifest = await skyReminderLoadManifest(fm, moduleDir);
+  try { skyReminderWidgetDebug("package-before-update", { sourceVersion: String(manifest?.sourceVersion || ""), mainFile: skyReminderCurrentMainScriptFilename() }); } catch (_) {}
   manifest = await skyReminderUpdateFromGitHubIfNeeded(fm, moduleDir, manifest);
+  try {
+    const expected = Object.create(null);
+    for (const p of (manifest?.parts || [])) if (p && p.file) expected[String(p.file)] = String(p.sha256 || "");
+    const probe = {};
+    for (const file of ["004d_widget_layout.js", "007_shortcut_entrypoint.js"]) {
+      const p = fm.joinPath(moduleDir, file);
+      probe[file] = { expected: expected[file] || "", actual: await skyReminderLocalSha256(fm, p) };
+    }
+    skyReminderWidgetDebug("package-active", { sourceVersion: String(manifest?.sourceVersion || ""), mainFile: skyReminderCurrentMainScriptFilename(), probe });
+  } catch (e) { try { skyReminderWidgetDebug("package-probe-failed", { error: String(e) }); } catch (_) {} }
   const parts = skyReminderManifestParts(manifest);
   if (!parts.length) throw new Error("Sky reminder manifest has no parts.");
 

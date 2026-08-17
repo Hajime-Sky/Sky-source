@@ -60,7 +60,8 @@ const ITEM_SOURCES = Object.freeze({
   clock12: build12hWindows,
   default: getUpcomingFixedDays,
 });
-const WIDGET_DATA_CACHE_REV = "2026-04-22-shard-label-v3";
+const WIDGET_DATA_CACHE_REV = "2026-08-17-widget-refresh-v4";
+const WIDGET_RUNTIME_REV = "v2.24";
 function getWidgetDataCached(now, viewMode, need, settings) {
   const st = settings || loadSettings();
   const cacheKey = `widget:${WIDGET_DATA_CACHE_REV}:${viewMode}:${need}`;
@@ -93,13 +94,14 @@ function buildCellRenders(now, viewMode, layout, settings) {
   return out;
 }
 function runWidget(now, options = {}) {
+  try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-runtime-enter", { runtimeRev: WIDGET_RUNTIME_REV }); } catch (_) {}
   const settings = loadSettings();
   const PAL = getPalette(settings.theme);
   const w = new ListWidget();
   const refreshDelayMs = Math.max(60 * 1000, Number(options.refreshDelayMs || 30 * 60 * 1000) || 30 * 60 * 1000);
   w.refreshAfterDate = new Date(Date.now() + refreshDelayMs);
   const debugReason = String(options.reason || (config.runsInWidget ? "widget-timeline" : "manual-set"));
-  try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-build-start", { reason: debugReason, refreshAfter: w.refreshAfterDate.toISOString(), effectiveNow: now instanceof Date ? now.toISOString() : String(now) }); } catch (_) {}
+  try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-build-start", { runtimeRev: WIDGET_RUNTIME_REV, reason: debugReason, refreshAfter: w.refreshAfterDate.toISOString(), effectiveNow: now instanceof Date ? now.toISOString() : String(now), viewMode: settings.viewMode, layoutMode: settings.layoutMode, theme: settings.theme }); } catch (_) {}
   w.backgroundGradient = new LinearGradient(PAL.bgCtx, [0, 1]);
   w.setPadding(0, 0, 0, 0);
   const family = String(config.widgetFamily || "small");

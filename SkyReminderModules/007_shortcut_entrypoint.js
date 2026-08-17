@@ -316,6 +316,13 @@ if (hasAction) {
   await runWidget(now);
 } else if (config.runsInApp) {
   await runApp(now);
+  try {
+    const refreshSettings = loadSettings();
+    const refreshNow = getEffectiveNow(new Date(), refreshSettings);
+    await runWidget(refreshNow);
+  } catch (e) {
+    try { console.error("Post-app widget refresh failed:", e); } catch (_) {}
+  }
 } else {
   await runShortcut(now, qpObj ? JSON.stringify(qpObj) : args.shortcutParameter, args);
 }

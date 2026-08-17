@@ -1065,6 +1065,12 @@ const __commonAction = String(args?.queryParameters?.commonAction || "");
   Script.complete();
 } else if (config.runsInApp) {
   await presentApp();
+  try {
+    const widget = await createWidget();
+    Script.setWidget(widget);
+  } catch (e) {
+    try { console.error("Post-app widget refresh failed:", e); } catch (_) {}
+  }
   Script.complete();
 } else {
   const now = getSkyCommonNow();

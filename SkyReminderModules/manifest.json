@@ -6,8 +6,8 @@
     "sha256": "e1d3e6dcc5d2b849d37bb54d7348cdaee43d173da6336970794dec1e1e5f250d",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.21_settings_ui_cleanup",
-  "generatedAt": "2026-08-17T11:05:51.547725Z",
+  "sourceVersion": "v2.22_post_app_widget_refresh",
+  "generatedAt": "2026-08-17T11:52:43.973930Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -119,7 +119,7 @@
       "file": "007_shortcut_entrypoint.js",
       "role": "Shortcut/query handling, startup checks, runtime mode dispatch, and Script.complete().",
       "sourceLines": "9154-9417",
-      "sha256": "244455fe59a78abc4895c0b2f5c4672f3f8e127270a6e1522b6a19b04acfb38c",
+      "sha256": "99b996810ada098e187993afdfd55ee546107b65f1e0e4bd9b22edfdf4197300",
       "url": ""
     }
   ],

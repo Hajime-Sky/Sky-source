@@ -1,0 +1,36 @@
+name: Apply Sky common settings to reminder source
+on:
+  push:
+    paths:
+      - .github/common-settings-trigger.txt
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply source patch
+        run: python3 .github/patch_sky_common_star.py
+      - name: Validate concatenated reminder
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          base=Path('SkyReminderModules')
+          manifest=json.loads((base/'manifest.json').read_text())
+          text='\n'.join((base/e['file']).read_text() for e in manifest['parts'])
+          Path('/tmp/star-reminder-concat.js').write_text('(async()=>{\n'+text+'\n})()\n')
+          PY
+          node --check /tmp/star-reminder-concat.js
+      - name: Commit source update
+        run: |
+          if git diff --quiet; then
+            echo 'No changes'
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SkyReminderModules
+          git commit -m 'Integrate Sky common settings into reminder source'
+          git push

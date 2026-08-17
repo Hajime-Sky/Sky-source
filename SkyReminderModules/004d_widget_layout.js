@@ -61,7 +61,7 @@ const ITEM_SOURCES = Object.freeze({
   default: getUpcomingFixedDays,
 });
 const WIDGET_DATA_CACHE_REV = "2026-08-17-widget-refresh-v4";
-const WIDGET_RUNTIME_REV = "v2.24";
+const WIDGET_RUNTIME_REV = "v2.25";
 function getWidgetDataCached(now, viewMode, need, settings) {
   const st = settings || loadSettings();
   const cacheKey = `widget:${WIDGET_DATA_CACHE_REV}:${viewMode}:${need}`;
@@ -108,6 +108,17 @@ function runWidget(now, options = {}) {
   const viewMode = settings.viewMode;
   const layoutMode = settings.layoutMode;
   const layout = resolveWidgetLayout(family, viewMode, layoutMode);
+  try {
+    if (typeof skyReminderCreateWholeWidgetBackground === "function") {
+      const bg = skyReminderCreateWholeWidgetBackground(settings.theme, layout, viewMode);
+      if (bg) {
+        w.backgroundImage = bg;
+        try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-background", { runtimeRev: WIDGET_RUNTIME_REV, width: Number(bg?.size?.width || 0), height: Number(bg?.size?.height || 0) }); } catch (_) {}
+      }
+    }
+  } catch (e) {
+    try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-background-failed", { runtimeRev: WIDGET_RUNTIME_REV, error: String(e && (e.stack || e.message) || e) }); } catch (_) {}
+  }
   const cells = buildCellRenders(now, viewMode, layout, settings);
   const makeImg = (c) => generateImage(c?.info || null, now, settings.theme, c?.mode || viewMode, c?.index || 0, !!c?.isExpanded);
   if (!cells.length) { w.addText("None"); Script.setWidget(w); try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-set", { reason: debugReason, family, cells: 0 }); } catch (_) {} return; }

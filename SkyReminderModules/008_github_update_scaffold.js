@@ -74,7 +74,8 @@ function skyReminderWidgetBackgroundSize(layout, viewMode) {
   const lw = Math.max(1, Number(logical?.width) || 1);
   const lh = Math.max(1, Number(logical?.height) || 1);
   const longSide = Math.max(lw, lh);
-  const scale = 800 / longSide;
+  const targetLongSide = Math.min(640, Math.max(320, longSide * 2));
+  const scale = targetLongSide / longSide;
   return new Size(Math.max(1, Math.round(lw * scale)), Math.max(1, Math.round(lh * scale)));
 }
 function skyReminderCreateWholeWidgetBackground(theme, layout, viewMode) {
@@ -89,58 +90,6 @@ function skyReminderCreateWholeWidgetBackground(theme, layout, viewMode) {
   skyReminderDrawStarryCanvasBackground(ctx, W, H, PAL);
   return ctx.getImage();
 }
-const SKY_REMINDER_NATIVE_RUN_WIDGET = typeof runWidget === "function" ? runWidget : null;
-function skyReminderRunWidgetWithStarryBackground(now) {
-  try {
-    const settings = loadSettings();
-    const w = new ListWidget();
-    const PAL = getPalette(settings.theme);
-    try { w.backgroundGradient = new LinearGradient(PAL.bgCtx, [0, 1]); } catch (_) {}
-    w.setPadding(0, 0, 0, 0);
-    const family = String(config.widgetFamily || "small");
-    const viewMode = settings.viewMode;
-    const layoutMode = settings.layoutMode;
-    const layout = resolveWidgetLayout(family, viewMode, layoutMode);
-    w.backgroundImage = skyReminderCreateWholeWidgetBackground(settings.theme, layout, viewMode);
-    const cells = buildCellRenders(now, viewMode, layout, settings);
-    const makeImg = (c) => generateImage(c?.info || null, now, settings.theme, c?.mode || viewMode, c?.index || 0, !!c?.isExpanded);
-    if (!cells.length) {
-      w.addText("None");
-      Script.setWidget(w);
-      return;
-    }
-    const stack = w.addStack();
-    if (layout.cols === 1 && layout.rows === 1) {
-      const cell = cells[0];
-      stack.addImage(makeImg(cell));
-      Script.setWidget(w);
-      return;
-    }
-    stack.layoutVertically();
-    for (let r = 0; r < layout.rows; r++) {
-      const row = stack.addStack();
-      row.layoutHorizontally();
-      for (let c = 0; c < layout.cols; c++) {
-        const idx = r * layout.cols + c;
-        const cell = cells[idx];
-        if (!cell) continue;
-        const img = makeImg(cell);
-        const iNode = row.addImage(img);
-        let size = WIDGET_IMAGE_SIZES.base;
-        if (cell.isExpanded) size = WIDGET_IMAGE_SIZES.expanded[String(viewMode || "")] || size;
-        iNode.imageSize = size;
-        if (c < layout.cols - 1) row.addSpacer(0);
-      }
-      if (r < layout.rows - 1) stack.addSpacer(0);
-    }
-    Script.setWidget(w);
-  } catch (e) {
-    try { console.error("[SKYBGDBG] starry widget fallback: " + e); } catch (_) {}
-    if (typeof SKY_REMINDER_NATIVE_RUN_WIDGET === "function") return SKY_REMINDER_NATIVE_RUN_WIDGET(now);
-    throw e;
-  }
-}
-runWidget = skyReminderRunWidgetWithStarryBackground;
 function skyReminderResolveWebTheme() {
   try {
     const st = typeof loadSettings === "function" ? loadSettings() : {};

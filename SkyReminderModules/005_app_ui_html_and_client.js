@@ -2487,6 +2487,13 @@ const html = `
         <button class="help-entry-btn" onclick="openHelp('data')">この画面の使い方 (?)</button>
       </div>
       <div class="screen-subnote">本番 / テストの状態、保存データ、危険操作を混ぜずに確認できるよう整理しています。</div>
+      <div class="section system-card">
+        <h3>Sky共通設定</h3>
+        <div class="rule-subnote">時差、地方の上書き、GitHub更新頻度、バックアップ保存先はSky系アプリで共通管理します。</div>
+        <div class="system-stack-actions" style="margin-top:12px;">
+          <div class="btn secondary" onclick="sendCommand('scriptable-opencommonsettings://1', this)">Sky共通設定を開く</div>
+        </div>
+      </div>
       <div class="section zone-virtual system-card">
         <div class="card-header system-card-header-split">
           <span>タイムトラベル（テストモード）</span>
@@ -2501,28 +2508,6 @@ const html = `
         <div class="rule-subnote" style="margin-top:12px;">
           ※時間を進めると、アプリの中の時間もすぐに進みます。<br>
           ※「オフ」に戻すと、現実の空（いまの時間）に戻ります。
-        </div>
-      </div>
-      <div class="section system-card">
-        <h3>海外との時差設定</h3>
-        <div class="minirow">
-          <div class="label">時差の合わせ方</div>
-          <div class="segmented narrow">
-            <div class="opt ${settings.localOffsetAuto !== false ? 'selected' : ''}" onclick="setLocalOffsetAuto(true, this)">自動(端末)</div>
-            <div class="opt ${settings.localOffsetAuto === false ? 'selected' : ''}" onclick="setLocalOffsetAuto(false, this)">手動</div>
-          </div>
-        </div>
-        <div id="manual-offset-row" style="display:${settings.localOffsetAuto !== false ? 'none' : 'flex'}; flex-direction:column; margin-top:12px;">
-          ${buildUiFieldHtml({ label: "世界標準時(UTC)からのズレ", path: "localOffset", def: 9, value: num(settings.localOffset, 9) })}
-        </div>
-      </div>
-      <div class="section system-card">
-        <h3>地方の上書き設定</h3>
-        <div class="rule-subnote" style="margin-bottom:12px;">通常は自動で判定されます。必要なときだけ、今日の地方表示を手動で上書きできます。</div>
-        <div class="rule-subnote" style="margin-bottom:12px;">ここは自動保存されません。保存ボタンを押すまでは反映されず、大キャンとデイリーを同じ地方にはできません。</div>
-        <div id="realm-override-fields">${buildRealmDisplayHtml(settings)}</div>
-        <div class="btnrow system-copy-row" style="flex-wrap:wrap; gap:8px; margin-top:12px;">
-          <div class="btn secondary" id="btn-save-realm-overrides" onclick="saveRealmOverrides(this)">地方の上書きを保存</div>
         </div>
       </div>
       <div class="section system-card">
@@ -2546,14 +2531,7 @@ const html = `
       <div class="section system-card">
         <h3>GitHubアップデート</h3>
         <div class="rule-subnote">起動時にGitHub上の分割ファイルを確認し、更新があればScriptable内のフォルダに保存してから実行します。</div>
-        <div class="minirow" style="margin-top:12px;">
-          <div class="label">更新タイミング</div>
-          <div class="segmented narrow">
-            <div class="opt ${(settings.githubUpdate?.policy || 'daily') === 'none' ? 'selected' : ''}" onclick="handleSettingChange('githubUpdate.policy', 'none', this)">更新しない</div>
-            <div class="opt ${(settings.githubUpdate?.policy || 'daily') === 'daily' ? 'selected' : ''}" onclick="handleSettingChange('githubUpdate.policy', 'daily', this)">24時間</div>
-            <div class="opt ${(settings.githubUpdate?.policy || 'daily') === 'always' ? 'selected' : ''}" onclick="handleSettingChange('githubUpdate.policy', 'always', this)">毎回</div>
-          </div>
-        </div>
+        <div class="rule-subnote" style="margin-top:12px;">更新タイミングはSky共通設定で管理します。現在: ${settings.githubUpdate?.policy === 'none' ? '更新しない' : settings.githubUpdate?.policy === 'always' ? '毎回' : '24時間'}</div>
         <div class="system-stack-actions" style="margin-top:12px;">
           <div class="btn secondary" data-action="github-update-now" onclick="runGithubUpdateNow(this)">今すぐ更新</div>
         </div>
@@ -2566,13 +2544,7 @@ const html = `
       <div class="section system-card">
         <h3>設定のインポート / エクスポート</h3>
         <div class="rule-subnote">画像以外の保存データを丸ごとバックアップします。読み込みは選択中の保存先にある最新バックアップを使い、データを書き換えたあと通常実行と同じように再スケジューリングします。</div>
-        <div class="minirow" style="margin-top:12px;">
-          <div class="label">バックアップ保存先</div>
-          <div class="segmented narrow">
-            <div class="opt ${settings.backupStorageMode !== 'local' ? 'selected' : ''}" onclick="handleSettingChange('backupStorageMode', 'iCloud', this)">iCloud</div>
-            <div class="opt ${settings.backupStorageMode === 'local' ? 'selected' : ''}" onclick="handleSettingChange('backupStorageMode', 'local', this)">local</div>
-          </div>
-        </div>
+        <div class="rule-subnote" style="margin-top:12px;">保存先はSky共通設定で変更できます。</div>
         <div class="rule-subnote" id="settings-backup-path-note" style="margin-top:12px;">現在の保存先: ${settings.backupStorageMode === 'local' ? 'local' : 'iCloud'} / ${SETTINGS_BACKUP_DIRNAME}</div>
         <div class="btnrow system-copy-row" style="flex-wrap:wrap; gap:8px; margin-top:12px;">
           <div class="btn small del-btn" style="flex:1;" onclick="sendCommand('scriptable-settingsexport://', this)">バックアップを書き出す</div>

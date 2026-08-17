@@ -717,6 +717,15 @@ WEBVIEW_HANDLERS[WV_ACTION.NOTIF_ENABLE_ALL] = async (_r) => {
     saveDisabledList([], st, txTimeMs);
   }, "すべての通知をオンにしました");
 };
+WEBVIEW_HANDLERS[WV_ACTION.OPEN_COMMON_SETTINGS] = async (_r) => {
+  try {
+    const common = importModule("HajimeSkyTools/common-settings");
+    if (common && typeof common.open === "function") common.open();
+    else Safari.open("scriptable:///run?scriptName=" + encodeURIComponent("Sky_共通設定"));
+  } catch (_) {
+    Safari.open("scriptable:///run?scriptName=" + encodeURIComponent("Sky_共通設定"));
+  }
+};
 WEBVIEW_HANDLERS[WV_ACTION.GITHUB_UPDATE_NOW] = async (_r) => {
   const setGithubUpdateButtonState = (text, busy, kind = "ok") => {
     safeEvalJsWithGen(`

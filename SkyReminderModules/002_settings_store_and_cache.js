@@ -70,6 +70,13 @@ const RUNSTATE_KEY_TEST = "SKY_NOTIFY_RUNSTATE_TEST";
 const STORAGE_DIRNAME = "HajimeSkyTools/star-reminder/data";
 const PREVIOUS_STORAGE_DIRNAME = "SkyReminder/data";
 const LEGACY_STORAGE_DIRNAME = "SkyReminderData";
+let SKY_COMMON_SETTINGS = null;
+try { SKY_COMMON_SETTINGS = importModule("HajimeSkyTools/common-settings"); } catch (_) {}
+function applySkyCommonSettingsSafe(settings) {
+  if (!SKY_COMMON_SETTINGS || typeof SKY_COMMON_SETTINGS.applyToReminderSettings !== "function") return settings;
+  try { return SKY_COMMON_SETTINGS.applyToReminderSettings(settings); }
+  catch (e) { try { console.warn("Sky common settings could not be applied: " + e); } catch (_) {} return settings; }
+}
 const DEFAULT_SETTINGS = {
   theme: "dark",
   useCache: true,
@@ -237,7 +244,7 @@ function normalizeOriginalSinConfig(cfg) {
 }
 function normalizeSettings(st) {
   const base = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-  if (!isPlainObject(st)) return base;
+  if (!isPlainObject(st)) return applySkyCommonSettingsSafe(base);
   const out = { ...base, ...st };
   out.testMode = !!(typeof st.testMode === "boolean" ? st.testMode : st?.testMode?.enabled);
   if (Number.isFinite(Number(st?.testOffsetMs))) out.testOffsetMs = Number(st.testOffsetMs);
@@ -259,7 +266,7 @@ function normalizeSettings(st) {
   out.backupStorageMode = String(st?.backupStorageMode || base.backupStorageMode) === "local" ? "local" : "iCloud";
   out.presetName = String(st?.presetName || base.presetName || "custom");
   if (!Array.isArray(out.eventOrder) || !out.eventOrder.length) out.eventOrder = base.eventOrder.slice();
-  return out;
+  return applySkyCommonSettingsSafe(out);
 }
 function normalizeRunState(rs) {
   return isPlainObject(rs) ? rs : {};

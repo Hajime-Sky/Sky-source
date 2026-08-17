@@ -7,10 +7,33 @@ const DRAW_HANDLERS = Object.freeze({
   clock12: ({ info, now, theme, index }) => drawClockFace12(info, now, theme, index),
   clock24: ({ info, now, theme, index }) => drawClockFace24(info, now, theme, index),
 });
+function skyReminderWidgetTargetImageSize(mode, isExpanded) {
+  const key = String(mode || "").trim() || "clock24";
+  const scale = 2;
+  if (isExpanded && key === "timeline") return new Size(WIDGET_BASE_SZ * scale, WIDGET_EXP_SZ * scale);
+  if (isExpanded && key === "bar") return new Size(WIDGET_EXP_SZ * scale, WIDGET_BASE_SZ * scale);
+  return new Size(WIDGET_BASE_SZ * scale, WIDGET_BASE_SZ * scale);
+}
+function skyReminderResizeImageForWidget(image, mode, isExpanded) {
+  if (!config.runsInWidget || !image || !image.size) return image;
+  const target = skyReminderWidgetTargetImageSize(mode, isExpanded);
+  const tw = Math.max(1, Math.round(Number(target.width) || 1));
+  const th = Math.max(1, Math.round(Number(target.height) || 1));
+  const sw = Math.max(1, Math.round(Number(image.size.width) || 1));
+  const sh = Math.max(1, Math.round(Number(image.size.height) || 1));
+  if (sw <= tw && sh <= th) return image;
+  const ctx = new DrawContext();
+  ctx.size = new Size(tw, th);
+  ctx.opaque = false;
+  ctx.respectScreenScale = false;
+  ctx.drawImageInRect(image, new Rect(0, 0, tw, th));
+  return ctx.getImage();
+}
 function generateImage(info, now, theme, mode, index, isExpanded) {
   const key = String(mode || "").trim() || "clock24";
   const handler = DRAW_HANDLERS[key] || DRAW_HANDLERS.clock24;
-  return handler({ info, now, theme, mode: key, index, isExpanded });
+  const image = handler({ info, now, theme, mode: key, index, isExpanded });
+  return skyReminderResizeImageForWidget(image, key, !!isExpanded);
 }
 const WIDGET_LAYOUT_RULES = Object.freeze({
   small: [
@@ -61,7 +84,7 @@ const ITEM_SOURCES = Object.freeze({
   default: getUpcomingFixedDays,
 });
 const WIDGET_DATA_CACHE_REV = "2026-08-17-widget-refresh-v4";
-const WIDGET_RUNTIME_REV = "v2.25";
+const WIDGET_RUNTIME_REV = "v2.26";
 function getWidgetDataCached(now, viewMode, need, settings) {
   const st = settings || loadSettings();
   const cacheKey = `widget:${WIDGET_DATA_CACHE_REV}:${viewMode}:${need}`;
@@ -125,7 +148,9 @@ function runWidget(now, options = {}) {
   const stack = w.addStack();
   if (layout.cols === 1 && layout.rows === 1) {
     const cell = cells[0];
-    stack.addImage(makeImg(cell, 0));
+    const img = makeImg(cell, 0);
+    try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-cell-image", { runtimeRev: WIDGET_RUNTIME_REV, reason: debugReason, index: 0, mode: String(cell?.mode || viewMode), expanded: !!cell?.isExpanded, width: Number(img?.size?.width || 0), height: Number(img?.size?.height || 0) }); } catch (_) {}
+    stack.addImage(img);
     Script.setWidget(w);
     try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-set", { reason: debugReason, family, cells: cells.length }); } catch (_) {}
     return;
@@ -139,6 +164,7 @@ function runWidget(now, options = {}) {
       const cell = cells[idx];
       if (!cell) continue;
       const img = makeImg(cell, idx);
+      try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-cell-image", { runtimeRev: WIDGET_RUNTIME_REV, reason: debugReason, index: idx, mode: String(cell?.mode || viewMode), expanded: !!cell?.isExpanded, width: Number(img?.size?.width || 0), height: Number(img?.size?.height || 0) }); } catch (_) {}
       const iNode = row.addImage(img);
       let size = WIDGET_IMAGE_SIZES.base;
       if (cell.isExpanded) size = WIDGET_IMAGE_SIZES.expanded[String(viewMode || "")] || size;

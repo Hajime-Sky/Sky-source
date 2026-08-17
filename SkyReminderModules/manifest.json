@@ -6,8 +6,8 @@
     "sha256": "0d644e38a63b391b9b53fe2242940f38f5fb964ce4ba4d8bf03438bc6803fba7",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.25_widget_runtime_ssot",
-  "generatedAt": "2026-08-17T12:42:34.643581Z",
+  "sourceVersion": "v2.26_widget_image_payload",
+  "generatedAt": "2026-08-17T12:55:35.355821Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -91,7 +91,7 @@
       "file": "004d_widget_layout.js",
       "role": "Widget layout resolution, image generation dispatch, and preview card HTML.",
       "sourceLines": "3769-3928",
-      "sha256": "c4512965ae8e2962854b6239ffe9f9a0c8ceb4c430522968f0c2f773992c974c",
+      "sha256": "ef23872dc78ebf42db3a9148586fbfe65f6d371bb29f3553c07c58e7dd899cef",
       "url": ""
     },
     {

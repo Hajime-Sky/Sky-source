@@ -1,0 +1,75 @@
+name: Fix reminder widget image payload v26
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch widget image payload
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, hashlib, datetime
+
+          d=Path('SkyReminderModules')
+          p=d/'004d_widget_layout.js'
+          s=p.read_text(encoding='utf-8')
+          old='''function generateImage(info, now, theme, mode, index, isExpanded) {\n  const key = String(mode || "").trim() || "clock24";\n  const handler = DRAW_HANDLERS[key] || DRAW_HANDLERS.clock24;\n  return handler({ info, now, theme, mode: key, index, isExpanded });\n}'''
+          new='''function skyReminderWidgetTargetImageSize(mode, isExpanded) {\n  const key = String(mode || "").trim() || "clock24";\n  const scale = 2;\n  if (isExpanded && key === "timeline") return new Size(WIDGET_BASE_SZ * scale, WIDGET_EXP_SZ * scale);\n  if (isExpanded && key === "bar") return new Size(WIDGET_EXP_SZ * scale, WIDGET_BASE_SZ * scale);\n  return new Size(WIDGET_BASE_SZ * scale, WIDGET_BASE_SZ * scale);\n}\nfunction skyReminderResizeImageForWidget(image, mode, isExpanded) {\n  if (!config.runsInWidget || !image || !image.size) return image;\n  const target = skyReminderWidgetTargetImageSize(mode, isExpanded);\n  const tw = Math.max(1, Math.round(Number(target.width) || 1));\n  const th = Math.max(1, Math.round(Number(target.height) || 1));\n  const sw = Math.max(1, Math.round(Number(image.size.width) || 1));\n  const sh = Math.max(1, Math.round(Number(image.size.height) || 1));\n  if (sw <= tw && sh <= th) return image;\n  const ctx = new DrawContext();\n  ctx.size = new Size(tw, th);\n  ctx.opaque = false;\n  ctx.respectScreenScale = false;\n  ctx.drawImageInRect(image, new Rect(0, 0, tw, th));\n  return ctx.getImage();\n}\nfunction generateImage(info, now, theme, mode, index, isExpanded) {\n  const key = String(mode || "").trim() || "clock24";\n  const handler = DRAW_HANDLERS[key] || DRAW_HANDLERS.clock24;\n  const image = handler({ info, now, theme, mode: key, index, isExpanded });\n  return skyReminderResizeImageForWidget(image, key, !!isExpanded);\n}'''
+          if old not in s: raise SystemExit('generateImage marker missing')
+          s=s.replace(old,new,1)
+          s=s.replace('const WIDGET_RUNTIME_REV = "v2.25";', 'const WIDGET_RUNTIME_REV = "v2.26";', 1)
+
+          old_single='''    const cell = cells[0];\n    stack.addImage(makeImg(cell, 0));\n    Script.setWidget(w);'''
+          new_single='''    const cell = cells[0];\n    const img = makeImg(cell, 0);\n    try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-cell-image", { runtimeRev: WIDGET_RUNTIME_REV, reason: debugReason, index: 0, mode: String(cell?.mode || viewMode), expanded: !!cell?.isExpanded, width: Number(img?.size?.width || 0), height: Number(img?.size?.height || 0) }); } catch (_) {}\n    stack.addImage(img);\n    Script.setWidget(w);'''
+          if old_single not in s: raise SystemExit('single-cell marker missing')
+          s=s.replace(old_single,new_single,1)
+
+          old_multi='''      const img = makeImg(cell, idx);\n      const iNode = row.addImage(img);'''
+          new_multi='''      const img = makeImg(cell, idx);\n      try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-cell-image", { runtimeRev: WIDGET_RUNTIME_REV, reason: debugReason, index: idx, mode: String(cell?.mode || viewMode), expanded: !!cell?.isExpanded, width: Number(img?.size?.width || 0), height: Number(img?.size?.height || 0) }); } catch (_) {}\n      const iNode = row.addImage(img);'''
+          if old_multi not in s: raise SystemExit('multi-cell marker missing')
+          s=s.replace(old_multi,new_multi,1)
+          p.write_text(s,encoding='utf-8')
+
+          mp=d/'manifest.json'
+          m=json.loads(mp.read_text(encoding='utf-8'))
+          for e in m.get('parts',[]):
+              if e.get('file'):
+                  e['sha256']=hashlib.sha256((d/e['file']).read_bytes()).hexdigest()
+          m['sourceVersion']='v2.26_widget_image_payload'
+          m['generatedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z')
+          mp.write_text(json.dumps(m,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Validate combined modules
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib
+          d=Path('SkyReminderModules')
+          m=json.loads((d/'manifest.json').read_text(encoding='utf-8'))
+          assert m['sourceVersion']=='v2.26_widget_image_payload'
+          for e in m['parts']:
+              assert hashlib.sha256((d/e['file']).read_bytes()).hexdigest()==e['sha256'],e['file']
+          w=(d/'004d_widget_layout.js').read_text(encoding='utf-8')
+          assert 'WIDGET_RUNTIME_REV = "v2.26"' in w
+          assert 'skyReminderResizeImageForWidget' in w
+          assert 'widget-cell-image' in w
+          Path('/tmp/reminder.js').write_text('(async()=>{\n'+'\n'.join((d/e['file']).read_text(encoding='utf-8') for e in m['parts'])+'\n})();',encoding='utf-8')
+          PY
+          node --check /tmp/reminder.js
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SkyReminderModules/004d_widget_layout.js SkyReminderModules/manifest.json
+          git commit -m "Reduce reminder widget image payload"
+          git push origin main

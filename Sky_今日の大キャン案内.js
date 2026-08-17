@@ -18,6 +18,18 @@ const CACHE_META_FILE = "image_cache_meta.json";
 const AUTOMATION_WARN_STATE_FILE = "automation_warn_state.json";
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const UPDATE_POLICIES = Object.freeze(["none", "daily", "always"]);
+let SKY_COMMON_SETTINGS = null;
+try { SKY_COMMON_SETTINGS = importModule("HajimeSkyTools/common-settings"); } catch (_) {}
+function readSkyCommonSettingsSafe() {
+  try { return SKY_COMMON_SETTINGS && typeof SKY_COMMON_SETTINGS.load === "function" ? SKY_COMMON_SETTINGS.load() : null; } catch (_) { return null; }
+}
+function openSkyCommonSettings() {
+  try {
+    if (SKY_COMMON_SETTINGS && typeof SKY_COMMON_SETTINGS.open === "function") SKY_COMMON_SETTINGS.open();
+    else Safari.open("scriptable:///run?scriptName=" + encodeURIComponent("Sky_共通設定"));
+    return true;
+  } catch (_) { return false; }
+}
 const TREASURE_CANDLE_CYCLE = Object.freeze({
   anchorSkyDate: "2025-08-21",
   realmById: Object.freeze(["forest", "valley", "waste", "vault", "prairie"]),
@@ -345,7 +357,10 @@ function getCurrentSkyContext(dateObj = new Date()) {
 function calcByServerDate(serverDate, targetSkyYMD) {
   const anchorDate = parseYMDToUtcDate(TREASURE_CANDLE_CYCLE.anchorSkyDate);
   const dayDiff = anchorDate ? daysBetweenUtcDates(serverDate, anchorDate) : 0;
-  const cycleRealmKey = TREASURE_CANDLE_CYCLE.realmById[mod(dayDiff, TREASURE_CANDLE_CYCLE.realmById.length)];
+  const automaticRealmKey = TREASURE_CANDLE_CYCLE.realmById[mod(dayDiff, TREASURE_CANDLE_CYCLE.realmById.length)];
+  const common = readSkyCommonSettingsSafe();
+  const overrideRealmKey = String(common?.realmOverrides?.treasure || "");
+  const cycleRealmKey = REALMS.some(r => r.key === overrideRealmKey) ? overrideRealmKey : automaticRealmKey;
   const realmIndex = Math.max(0, REALMS.findIndex(r => r.key === cycleRealmKey));
   const realm = REALMS[realmIndex];
   const patterns = PATTERN_DATA[realm.key].patterns;
@@ -435,7 +450,9 @@ function writeJsonFile(name, value) {
 }
 function readUpdateState() {
   const state = readJsonFile(UPDATE_STATE_KEY + ".json", {});
-  const policy = UPDATE_POLICIES.includes(String(state?.policy || "")) ? String(state.policy) : "daily";
+  const commonPolicy = String(readSkyCommonSettingsSafe()?.github?.updatePolicy || "");
+  const localPolicy = UPDATE_POLICIES.includes(String(state?.policy || "")) ? String(state.policy) : "daily";
+  const policy = UPDATE_POLICIES.includes(commonPolicy) ? commonPolicy : localPolicy;
   return {
     ...(state || {}),
     policy,
@@ -449,7 +466,14 @@ function writeUpdateStatePatch(patch) {
 }
 function setUpdatePolicy(policy) {
   const normalized = UPDATE_POLICIES.includes(String(policy || "")) ? String(policy) : "daily";
-  writeUpdateStatePatch({ policy: normalized });
+  try {
+    if (SKY_COMMON_SETTINGS && typeof SKY_COMMON_SETTINGS.load === "function" && typeof SKY_COMMON_SETTINGS.save === "function") {
+      const common = SKY_COMMON_SETTINGS.load();
+      common.github = { ...(common.github || {}), updatePolicy: normalized };
+      SKY_COMMON_SETTINGS.save(common);
+    }
+  } catch (_) {}
+  writeJsonFile(UPDATE_STATE_KEY + ".json", { ...readJsonFile(UPDATE_STATE_KEY + ".json", {}), policy: normalized });
   return normalized;
 }
 function formatLocalDateTimeFromMs(ms) {
@@ -979,7 +1003,7 @@ async function presentApp() {
     alert.addAction("今日の画像を表示");
     alert.addAction("説明テキストを表示");
     alert.addAction("画像を取得 / 再取得");
-    alert.addAction("GitHub更新設定");
+    alert.addAction("Sky共通設定");
     alert.addAction("今すぐ更新");
     alert.addAction("データとキャッシュをリセット");
     alert.addCancelAction("終了");
@@ -998,6 +1022,7 @@ async function presentApp() {
       continue;
     }
     if (index === 3) {
+      if (openSkyCommonSettings()) return;
       await showUpdatePolicySettings();
       continue;
     }

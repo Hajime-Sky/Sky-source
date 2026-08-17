@@ -2482,10 +2482,10 @@ const html = `
         <div class="screen-title-wrap"><h2>システムとデータ</h2></div>
         <button class="help-entry-btn" onclick="openHelp('data')">この画面の使い方 (?)</button>
       </div>
-      <div class="screen-subnote">共通設定、通知プリセット、削除・初期化を役割ごとに分けています。</div>
+      <div class="screen-subnote">星の子リマインダー固有の通知プリセットと保存データを管理します。</div>
       <div class="section system-card">
         <h3>Sky共通設定</h3>
-        <div class="rule-subnote">システム設定と保守操作はSky共通設定で管理します。通知プリセットとデータ削除だけこの画面に残します。</div>
+        <div class="rule-subnote">表示・時刻・地方上書き・キャッシュ・画像取得・更新・バックアップなど、Sky系アプリ共通の設定を開きます。</div>
         <div class="system-stack-actions" style="margin-top:12px;">
           <div class="btn secondary" onclick="sendCommand('scriptable-opencommonsettings://1', this)">Sky共通設定を開く</div>
         </div>
@@ -2502,7 +2502,7 @@ const html = `
       </div>
       <div class="section system-card">
       <h3>画像の管理</h3>
-      <div class="rule-subnote">画像の再取得はSky共通設定へ移動しました。ここでは画像の保存データ削除だけ行えます。</div>
+      <div class="rule-subnote">保存済みの画像データを削除できます。</div>
       <div class="system-stack-actions">
         <div class="btn danger del-btn" onclick="confirmDelete('IMAGES', '画像キャッシュ', this)">画像の保存データを整理</div>
       </div>

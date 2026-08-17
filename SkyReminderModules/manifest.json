@@ -6,8 +6,8 @@
     "sha256": "e1d3e6dcc5d2b849d37bb54d7348cdaee43d173da6336970794dec1e1e5f250d",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.20_common_appearance",
-  "generatedAt": "2026-08-17T10:47:43.402534Z",
+  "sourceVersion": "v2.21_settings_ui_cleanup",
+  "generatedAt": "2026-08-17T11:05:51.547725Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -21,7 +21,7 @@
       "file": "001_constants_and_navigation.js",
       "role": "Constants, action ids, navigation definitions, drawing defaults, and small shared helpers.",
       "sourceLines": "4-229",
-      "sha256": "bee6066ab3bc6624536a325015a1134510e44a39421c6185422db8b34b8f6123",
+      "sha256": "611fe8a9215f334e9cd77b92108ef37352049867bb3a9504321fc03528b1b376",
       "url": ""
     },
     {
@@ -98,7 +98,7 @@
       "file": "005_app_ui_html_and_client.js",
       "role": "Interactive app screen HTML, CSS, browser-side UI state, and command dispatch client.",
       "sourceLines": "3923-8349",
-      "sha256": "275a17d8126b1e102181b42f2862a3aaec1ef737cf070beeef446224f7cb6613",
+      "sha256": "065c97dc839f09ca5e9e20798e436432f11d5e97b612b4ee9bb8dd0c68f86ba7",
       "url": ""
     },
     {

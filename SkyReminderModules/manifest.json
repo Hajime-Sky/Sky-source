@@ -3,11 +3,11 @@
   "mainScript": "Sky_星の子リマインダー.js",
   "mainScriptFile": {
     "file": "Sky_星の子リマインダー.js",
-    "sha256": "0d644e38a63b391b9b53fe2242940f38f5fb964ce4ba4d8bf03438bc6803fba7",
+    "sha256": "621f85c8ddaa8adc1cddc1016b1f6d8e9494eada4912a5ee7f9f8942fbb64675",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.26_widget_image_payload",
-  "generatedAt": "2026-08-17T12:55:35.355821Z",
+  "sourceVersion": "v2.27_keep_migration_and_native_scale",
+  "generatedAt": "2026-08-17T17:34:39.233392Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,

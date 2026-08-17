@@ -654,7 +654,6 @@ async function skyReminderRunFromParts() {
     chunks.push(`\n// ---- ${part} ----\n${text}\n`);
   }
   if (!insertedMigrations) chunks.push(...migrationChunks);
-  skyReminderDeleteLocalMigrationFiles(fm, moduleDir, manifest);
   skyReminderDeleteLegacyModuleDir(fm, moduleDir);
 
   const source = `(async () => {\n${chunks.join("\n")}\n})()`;

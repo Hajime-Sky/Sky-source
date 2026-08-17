@@ -761,9 +761,12 @@ function renderWidgetImageWithDate(image, family, dateText) {
   const sourceWidth = image.size.width;
   const sourceHeight = image.size.height;
   if (!(sourceWidth > 0) || !(sourceHeight > 0)) return image;
-  // ウィジェット実行は2x実表示解像度で合成し、高解像度DrawContextによるメモリ超過を避ける。
+  // ウィジェット実行は端末の物理解像度倍率に合わせて合成する。
+  // @3x端末では3xまで確保してぼけを防ぎつつ、元画像解像度を上限にして過剰なDrawContextを避ける。
   // アプリ内プレビューは従来どおり元画像解像度を維持する。
-  const widgetTargetWidth = Math.max(340, Math.round(spec.width * 2));
+  let deviceScale = 2;
+  try { deviceScale = Math.max(1, Number(Device.screenScale()) || 2); } catch (_) {}
+  const widgetTargetWidth = Math.max(340, Math.round(spec.width * deviceScale));
   const canvasWidth = config.runsInWidget ? Math.min(sourceWidth, widgetTargetWidth) : sourceWidth;
   const imageScale = canvasWidth / sourceWidth;
   const scaledImageHeight = Math.max(1, Math.round(sourceHeight * imageScale));

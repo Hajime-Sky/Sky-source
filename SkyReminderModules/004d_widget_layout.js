@@ -92,10 +92,14 @@ function buildCellRenders(now, viewMode, layout, settings) {
   }
   return out;
 }
-function runWidget(now) {
+function runWidget(now, options = {}) {
   const settings = loadSettings();
   const PAL = getPalette(settings.theme);
   const w = new ListWidget();
+  const refreshDelayMs = Math.max(60 * 1000, Number(options.refreshDelayMs || 30 * 60 * 1000) || 30 * 60 * 1000);
+  w.refreshAfterDate = new Date(Date.now() + refreshDelayMs);
+  const debugReason = String(options.reason || (config.runsInWidget ? "widget-timeline" : "manual-set"));
+  try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-build-start", { reason: debugReason, refreshAfter: w.refreshAfterDate.toISOString(), effectiveNow: now instanceof Date ? now.toISOString() : String(now) }); } catch (_) {}
   w.backgroundGradient = new LinearGradient(PAL.bgCtx, [0, 1]);
   w.setPadding(0, 0, 0, 0);
   const family = String(config.widgetFamily || "small");
@@ -104,12 +108,13 @@ function runWidget(now) {
   const layout = resolveWidgetLayout(family, viewMode, layoutMode);
   const cells = buildCellRenders(now, viewMode, layout, settings);
   const makeImg = (c) => generateImage(c?.info || null, now, settings.theme, c?.mode || viewMode, c?.index || 0, !!c?.isExpanded);
-  if (!cells.length) { w.addText("None"); Script.setWidget(w); return; }
+  if (!cells.length) { w.addText("None"); Script.setWidget(w); try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-set", { reason: debugReason, family, cells: 0 }); } catch (_) {} return; }
   const stack = w.addStack();
   if (layout.cols === 1 && layout.rows === 1) {
     const cell = cells[0];
     stack.addImage(makeImg(cell, 0));
     Script.setWidget(w);
+    try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-set", { reason: debugReason, family, cells: cells.length }); } catch (_) {}
     return;
   }
   stack.layoutVertically();
@@ -130,6 +135,7 @@ function runWidget(now) {
     if (r < layout.rows - 1) stack.addSpacer(0);
   }
   Script.setWidget(w);
+  try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("widget-set", { reason: debugReason, family, cells: cells.length }); } catch (_) {}
 }
 function getPreviewImages(baseNow, settings) {
   const st = settings || loadSettings();

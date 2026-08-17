@@ -18,6 +18,36 @@ const SKY_REMINDER_MIGRATION_STATE_KEY = "SKY_STORAGE_MIGRATIONS";
 const SKY_REMINDER_KNOWN_MIGRATIONS = Object.freeze({
   "009_storage_migrations.js": "2026-04-22-unify-storage-v1",
 });
+const SKY_REMINDER_WIDGET_DEBUG_DIR = "HajimeSkyTools/_chatgpt-debug/widget-refresh";
+const SKY_REMINDER_WIDGET_DEBUG_FILE = "runtime.log";
+function skyReminderWidgetDebug(event, detail = {}) {
+  try {
+    const fm = FileManager.iCloud();
+    const root = fm.documentsDirectory();
+    let dir = root;
+    for (const part of SKY_REMINDER_WIDGET_DEBUG_DIR.split("/")) {
+      dir = fm.joinPath(dir, part);
+      if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+    }
+    const path = fm.joinPath(dir, SKY_REMINDER_WIDGET_DEBUG_FILE);
+    let prev = "";
+    try { if (fm.fileExists(path)) prev = fm.readString(path); } catch (_) {}
+    const env = {
+      runsInWidget: !!config.runsInWidget, runsInApp: !!config.runsInApp,
+      widgetFamily: String(config.widgetFamily || ""),
+      systemVersion: (() => { try { return Device.systemVersion(); } catch (_) { return ""; } })(),
+      scriptName: (() => { try { return Script.name(); } catch (_) { return SKY_REMINDER_MAIN_SCRIPT; } })(),
+    };
+    let payload = "";
+    try { payload = JSON.stringify({ ...env, ...(detail && typeof detail === "object" ? detail : { detail: String(detail) }) }); }
+    catch (_) { payload = String(detail); }
+    const line = `${new Date().toISOString()} [star-reminder] ${String(event)} | ${payload}`;
+    let next = prev ? prev + "\n" + line : line;
+    if (next.length > 160000) next = next.slice(next.length - 160000);
+    fm.writeString(path, next);
+  } catch (_) {}
+}
+
 const SKY_REMINDER_FALLBACK_PARTS = [
   "001_constants_and_navigation.js",
   "002_settings_store_and_cache.js",
@@ -612,4 +642,11 @@ async function skyReminderRunFromParts() {
   return result;
 }
 
-await skyReminderRunFromParts();
+skyReminderWidgetDebug("loader-start");
+try {
+  await skyReminderRunFromParts();
+  skyReminderWidgetDebug("loader-complete");
+} catch (error) {
+  skyReminderWidgetDebug("loader-error", { error: String(error && (error.stack || error.message) || error) });
+  throw error;
+}

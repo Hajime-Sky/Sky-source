@@ -18,6 +18,22 @@ const CACHE_META_FILE = "image_cache_meta.json";
 const AUTOMATION_WARN_STATE_FILE = "automation_warn_state.json";
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const UPDATE_POLICIES = Object.freeze(["none", "daily", "always"]);
+const WIDGET_DEBUG_DIR = "HajimeSkyTools/_chatgpt-debug/widget-refresh";
+function candleWidgetDebug(event, detail = {}) {
+  try {
+    const fm = FileManager.iCloud();
+    let dir = fm.documentsDirectory();
+    for (const part of WIDGET_DEBUG_DIR.split("/")) { dir = fm.joinPath(dir, part); if (!fm.fileExists(dir)) fm.createDirectory(dir, true); }
+    const path = fm.joinPath(dir, "runtime.log");
+    let prev = ""; try { if (fm.fileExists(path)) prev = fm.readString(path); } catch (_) {}
+    const env = { runsInWidget: !!config.runsInWidget, runsInApp: !!config.runsInApp, widgetFamily: String(config.widgetFamily || ""), systemVersion: (() => { try { return Device.systemVersion(); } catch (_) { return ""; } })(), scriptName: (() => { try { return Script.name(); } catch (_) { return SCRIPT_NAME; } })() };
+    let payload = ""; try { payload = JSON.stringify({ ...env, ...(detail && typeof detail === "object" ? detail : { detail: String(detail) }) }); } catch (_) { payload = String(detail); }
+    const line = `${new Date().toISOString()} [treasure-candle] ${String(event)} | ${payload}`;
+    let next = prev ? prev + "\n" + line : line; if (next.length > 160000) next = next.slice(next.length - 160000);
+    fm.writeString(path, next);
+  } catch (_) {}
+}
+candleWidgetDebug("script-start");
 let SKY_COMMON_SETTINGS = null;
 try { SKY_COMMON_SETTINGS = importModule("HajimeSkyTools/common-settings"); } catch (_) {}
 function readSkyCommonSettingsSafe() {
@@ -860,7 +876,7 @@ function getAppTempDir() {
   return dir;
 }
 // === ウィジェット生成処理 ===
-async function createWidget() {
+async function createWidget(options = {}) {
   const res = calcForCurrentLATime();
   const meta = readCacheMeta();
   if (!isCacheUsable(meta)) {
@@ -872,6 +888,10 @@ async function createWidget() {
   }
   const family = config.widgetFamily || "medium";
   const widget = new ListWidget();
+  const refreshDelayMs = Math.max(60 * 1000, Number(options.refreshDelayMs || 30 * 60 * 1000) || 30 * 60 * 1000);
+  widget.refreshAfterDate = new Date(Date.now() + refreshDelayMs);
+  const debugReason = String(options.reason || (config.runsInWidget ? "widget-timeline" : "manual-set"));
+  candleWidgetDebug("widget-build", { reason: debugReason, family, skyYMD: res.skyYMD, pattern: res.pattern.label, refreshAfter: widget.refreshAfterDate.toISOString() });
   widget.url = URLScheme.forRunningScript();
   widget.backgroundColor = new Color("#000000");
   let bgImage = renderWidgetImageWithDate(image, family, res.skyYMD);
@@ -1060,17 +1080,21 @@ const __commonAction = String(args?.queryParameters?.commonAction || "");
     await runSyncAndReport();
     Script.complete();
   } else if (config.runsInWidget) {
-  const widget = await createWidget();
+  const widget = await createWidget({ reason: "widget-timeline", refreshDelayMs: 30 * 60 * 1000 });
   Script.setWidget(widget);
+  candleWidgetDebug("widget-set", { reason: "widget-timeline", family: String(config.widgetFamily || "") });
   Script.complete();
 } else if (config.runsInApp) {
   await presentApp();
   try {
-    const widget = await createWidget();
+    const widget = await createWidget({ reason: "app-close", refreshDelayMs: 60 * 1000 });
     Script.setWidget(widget);
+    candleWidgetDebug("refresh-requested", { reason: "app-close" });
   } catch (e) {
+    candleWidgetDebug("refresh-request-failed", { reason: "app-close", error: String(e && (e.stack || e.message) || e) });
     try { console.error("Post-app widget refresh failed:", e); } catch (_) {}
   }
+  candleWidgetDebug("script-complete", { reason: "app-close" });
   Script.complete();
 } else {
   const now = getSkyCommonNow();
@@ -1081,5 +1105,13 @@ const __commonAction = String(args?.queryParameters?.commonAction || "");
       await syncAllImages();
     } catch (e) {}
   }
+  try {
+    const widget = await createWidget({ reason: "shortcut-complete", refreshDelayMs: 60 * 1000 });
+    Script.setWidget(widget);
+    candleWidgetDebug("refresh-requested", { reason: "shortcut-complete" });
+  } catch (e) {
+    candleWidgetDebug("refresh-request-failed", { reason: "shortcut-complete", error: String(e && (e.stack || e.message) || e) });
+  }
+  candleWidgetDebug("script-complete", { reason: "shortcut-complete" });
   Script.complete();
 }

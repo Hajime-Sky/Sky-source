@@ -310,20 +310,30 @@ if (_initSettings.imageAutoFetchEnabled !== false) {
 try { await withMutex(() => scheduleAllEvents(now, loadSettings())); } catch (e) { console.error("Initial schedule failed:", e); }
 const qpObj = getQueryParameters(args);
 const hasAction = !!(qpObj && String(qpObj.action || "").trim());
-if (hasAction) {
-  await runShortcut(now, JSON.stringify(qpObj), args);
-} else if (config.runsInWidget) {
-  await runWidget(now);
-} else if (config.runsInApp) {
-  await runApp(now);
+async function requestReminderWidgetRefresh(reason) {
   try {
     const refreshSettings = loadSettings();
     const refreshNow = getEffectiveNow(new Date(), refreshSettings);
-    await runWidget(refreshNow);
+    runWidget(refreshNow, { reason, refreshDelayMs: 60 * 1000 });
+    try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("refresh-requested", { reason }); } catch (_) {}
+    return true;
   } catch (e) {
-    try { console.error("Post-app widget refresh failed:", e); } catch (_) {}
+    try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("refresh-request-failed", { reason, error: String(e && (e.stack || e.message) || e) }); } catch (_) {}
+    try { console.error("Widget refresh request failed:", e); } catch (_) {}
+    return false;
   }
+}
+if (hasAction) {
+  await runShortcut(now, JSON.stringify(qpObj), args);
+  await requestReminderWidgetRefresh("action-complete");
+} else if (config.runsInWidget) {
+  runWidget(now, { reason: "widget-timeline", refreshDelayMs: 30 * 60 * 1000 });
+} else if (config.runsInApp) {
+  await runApp(now);
+  await requestReminderWidgetRefresh("app-close");
 } else {
   await runShortcut(now, qpObj ? JSON.stringify(qpObj) : args.shortcutParameter, args);
+  await requestReminderWidgetRefresh("shortcut-complete");
 }
+try { if (typeof skyReminderWidgetDebug === "function") skyReminderWidgetDebug("script-complete"); } catch (_) {}
 Script.complete();

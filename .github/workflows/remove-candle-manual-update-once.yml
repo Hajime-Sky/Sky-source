@@ -1,0 +1,42 @@
+name: Remove public candle manual update
+on:
+  create:
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.ref_type == 'branch' && startsWith(github.ref_name, 'trigger-remove-public-candle-update-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('Sky_今日の大キャン案内.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('    alert.addAction("更新を確認");\n','',1)
+          old='''    if (index === 4) {
+      const restarted = await runManualUpdateAndMaybeRestart();
+      if (restarted) return;
+      continue;
+    }
+    if (index === 5) {
+      await resetCacheAndReport();
+      continue;
+    }'''
+          new='''    if (index === 4) {
+      await resetCacheAndReport();
+      continue;
+    }'''
+          if old not in s: raise SystemExit('manual update block missing')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          node --check 'Sky_今日の大キャン案内.js'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'Sky_今日の大キャン案内.js'
+          git commit -m 'Use automatic updates for public candle app'
+          git push origin main

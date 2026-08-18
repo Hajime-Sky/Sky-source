@@ -1,7 +1,8 @@
 name: Public common actions cleanup
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -9,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Patch public Sky sources
         shell: bash
         run: |
@@ -21,7 +24,6 @@ jobs:
                   raise SystemExit(f'marker missing: {label}')
               return text.replace(old, new, 1)
 
-          # Star Reminder: persistent diagnostics off by default for normal users.
           root = Path('Sky_星の子リマインダー.js')
           s = root.read_text(encoding='utf-8')
           if 'SKY_REMINDER_PERSIST_DIAGNOSTICS' not in s:
@@ -35,83 +37,6 @@ jobs:
                   'star diagnostic guard')
           root.write_text(s, encoding='utf-8')
 
-          p = Path('SkyReminderModules/007_shortcut_entrypoint.js')
-          s = p.read_text(encoding='utf-8')
-          if 'skyCommonOpenNextRuntime' not in s:
-              marker = '''if (hasAction) {\n  await runShortcut(now, JSON.stringify(qpObj), args);'''
-              block = r'''function skyCommonParseRuntimeList(raw) {
-  try {
-    const parsed = JSON.parse(String(raw || "[]"));
-    return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
-  } catch (_) { return []; }
-}
-function skyCommonParseRuntimeResults(raw) {
-  try {
-    const parsed = JSON.parse(String(raw || "[]"));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (_) { return []; }
-}
-function skyCommonOpenNextRuntime(action, rawChain, results) {
-  const chain = skyCommonParseRuntimeList(rawChain);
-  const next = chain.shift();
-  if (!next) return false;
-  const q = [
-    "skyCommonAction=" + encodeURIComponent(String(action || "")),
-    "skyCommonChain=" + encodeURIComponent(JSON.stringify(chain)),
-    "skyCommonResult=" + encodeURIComponent(JSON.stringify(results || [])),
-  ].join("&");
-  try {
-    Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(next) + "&" + q);
-    return true;
-  } catch (_) { return false; }
-}
-async function skyCommonShowUpdateSummaryRuntime(results) {
-  const list = Array.isArray(results) ? results : [];
-  const hasError = list.some(x => x && x.status === "error");
-  const hasUpdate = list.some(x => x && x.status === "updated");
-  const a = new Alert();
-  a.title = hasError ? "一部の更新を確認できませんでした" : (hasUpdate ? "更新しました" : "更新はありません");
-  a.message = list.length
-    ? list.map(x => `${x.app || "Skyアプリ"}: ${x.status === "updated" ? "更新しました" : x.status === "error" ? "確認できませんでした" : "最新です"}`).join("\n")
-    : "更新対象のアプリがありません。";
-  a.addAction("OK");
-  await a.presentAlert();
-}
-const __skyCommonRuntimeAction = String(qpObj?.skyCommonAction || "");
-if (__skyCommonRuntimeAction === "refreshWidget") {
-  await requestReminderWidgetRefresh("common-settings");
-  skyCommonOpenNextRuntime("refreshWidget", qpObj?.skyCommonChain, []);
-  Script.complete();
-  return;
-}
-if (__skyCommonRuntimeAction === "updateAll") {
-  const results = skyCommonParseRuntimeResults(qpObj?.skyCommonResult);
-  let item = { app: "星の子リマインダー", status: "latest" };
-  try {
-    const before = skyReminderReadSettings();
-    const beforeAt = Number(before?.githubUpdate?.lastUpdatedAtMs || 0) || 0;
-    await skyReminderManualGithubUpdateAndRestart();
-    const after = skyReminderReadSettings();
-    const afterAt = Number(after?.githubUpdate?.lastUpdatedAtMs || 0) || 0;
-    const statusText = String(after?.githubUpdate?.lastUpdateStatus || "");
-    item.status = statusText.startsWith("error:") ? "error" : (afterAt > beforeAt ? "updated" : "latest");
-  } catch (e) {
-    item = { app: "星の子リマインダー", status: "error" };
-  }
-  results.push(item);
-  if (!skyCommonOpenNextRuntime("updateAll", qpObj?.skyCommonChain, results)) {
-    await skyCommonShowUpdateSummaryRuntime(results);
-  }
-  Script.complete();
-  return;
-}
-if (hasAction) {
-  await runShortcut(now, JSON.stringify(qpObj), args);'''
-              s = replace_once(s, marker, block, 'star runtime actions')
-          p.write_text(s, encoding='utf-8')
-
-          # Big Candle: disable persistent diagnostics, support shared refresh/update chain,
-          # and keep user-visible maintenance wording simple.
           p = Path('Sky_今日の大キャン案内.js')
           s = p.read_text(encoding='utf-8')
           if 'CANDLE_PERSIST_DIAGNOSTICS' not in s:
@@ -124,55 +49,15 @@ if (hasAction) {
                   'function candleWidgetDebug(event, detail = {}) {\n  if (!CANDLE_PERSIST_DIAGNOSTICS) return;\n  try {',
                   'candle diagnostic guard')
           s = s.replace('alert.addAction("今すぐ更新");', 'alert.addAction("更新を確認");')
-
-          if 'skyCommonOpenNextCandle' not in s:
-              helper_marker = 'runStorageMigrations();\nconst didUpdateScript = await updateScriptFromGitHubIfNeeded(false);'
-              helper = r'''function skyCommonParseCandleList(raw) {
-  try { const v = JSON.parse(String(raw || "[]")); return Array.isArray(v) ? v.map(String).filter(Boolean) : []; }
-  catch (_) { return []; }
-}
-function skyCommonParseCandleResults(raw) {
-  try { const v = JSON.parse(String(raw || "[]")); return Array.isArray(v) ? v : []; }
-  catch (_) { return []; }
-}
-function skyCommonOpenNextCandle(action, rawChain, results) {
-  const chain = skyCommonParseCandleList(rawChain);
-  const next = chain.shift();
-  if (!next) return false;
-  const q = [
-    "skyCommonAction=" + encodeURIComponent(String(action || "")),
-    "skyCommonChain=" + encodeURIComponent(JSON.stringify(chain)),
-    "skyCommonResult=" + encodeURIComponent(JSON.stringify(results || [])),
-  ].join("&");
-  try { Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(next) + "&" + q); return true; }
-  catch (_) { return false; }
-}
-async function skyCommonShowCandleUpdateSummary(results) {
-  const list = Array.isArray(results) ? results : [];
-  const hasError = list.some(x => x && x.status === "error");
-  const hasUpdate = list.some(x => x && x.status === "updated");
-  const a = new Alert();
-  a.title = hasError ? "一部の更新を確認できませんでした" : (hasUpdate ? "更新しました" : "更新はありません");
-  a.message = list.length
-    ? list.map(x => `${x.app || "Skyアプリ"}: ${x.status === "updated" ? "更新しました" : x.status === "error" ? "確認できませんでした" : "最新です"}`).join("\n")
-    : "更新対象のアプリがありません。";
-  a.addAction("OK");
-  await a.presentAlert();
-}
-runStorageMigrations();
-const didUpdateScript = await updateScriptFromGitHubIfNeeded(false);'''
-              s = replace_once(s, helper_marker, helper, 'candle shared helpers')
-
-          s = replace_once(s,
-              'const __commonAction = String(args?.queryParameters?.commonAction || "");\n  if (__commonAction === "githubUpdate") {',
-              '''const __commonAction = String(args?.queryParameters?.skyCommonAction || args?.queryParameters?.commonAction || "");\n  if (__commonAction === "refreshWidget") {\n    const widget = await createWidget({ reason: "common-settings", refreshDelayMs: 60 * 1000 });\n    Script.setWidget(widget);\n    skyCommonOpenNextCandle("refreshWidget", args?.queryParameters?.skyCommonChain, []);\n    Script.complete();\n  } else if (__commonAction === "updateAll") {\n    const results = skyCommonParseCandleResults(args?.queryParameters?.skyCommonResult);\n    let item = { app: "大キャン案内", status: "latest" };\n    try {\n      const before = readUpdateState();\n      const updated = await updateScriptFromGitHubIfNeeded(true);\n      const after = readUpdateState();\n      const failed = String(after?.lastStatus || "").toLowerCase().includes("error");\n      item.status = failed ? "error" : ((updated || Number(after?.lastUpdatedAtMs || 0) > Number(before?.lastUpdatedAtMs || 0)) ? "updated" : "latest");\n    } catch (_) { item = { app: "大キャン案内", status: "error" }; }\n    results.push(item);\n    if (!skyCommonOpenNextCandle("updateAll", args?.queryParameters?.skyCommonChain, results)) await skyCommonShowCandleUpdateSummary(results);\n    Script.complete();\n  } else if (__commonAction === "githubUpdate") {''',
-              'candle action dispatch')
+          old = '''const __commonAction = String(args?.queryParameters?.commonAction || "");\n  if (__commonAction === "githubUpdate") {'''
+          new = '''const __commonAction = String(args?.queryParameters?.skyCommonAction || args?.queryParameters?.commonAction || "");\n  if (__commonAction === "refreshWidget") {\n    try {\n      const widget = await createWidget({ reason: "common-settings", refreshDelayMs: 60 * 1000 });\n      Script.setWidget(widget);\n    } catch (e) { try { console.error("Widget refresh failed:", e); } catch (_) {} }\n    try {\n      const chain = JSON.parse(String(args?.queryParameters?.skyCommonChain || "[]"));\n      const list = Array.isArray(chain) ? chain.map(String).filter(Boolean) : [];\n      const next = list.shift();\n      if (next) {\n        const isReminder = String(next).normalize("NFC").includes("星の子リマインダー");\n        const q = isReminder\n          ? "action=commonrefresh"\n          : "skyCommonAction=refreshWidget&skyCommonChain=" + encodeURIComponent(JSON.stringify(list));\n        Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(next) + "&" + q);\n      }\n    } catch (_) {}\n    Script.complete();\n  } else if (__commonAction === "githubUpdate") {'''
+          if old in s:
+              s = replace_once(s, old, new, 'candle common refresh')
           p.write_text(s, encoding='utf-8')
 
-          # Regenerate Star Reminder hashes.
           manifest_path = Path('SkyReminderModules/manifest.json')
           m = json.loads(manifest_path.read_text(encoding='utf-8'))
-          m['sourceVersion'] = 'v2.28_public_ready_common_actions'
+          m['sourceVersion'] = 'v2.28_public_ready'
           m['generatedAt'] = datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z')
           for part in m.get('parts', []):
               fp = Path('SkyReminderModules') / part['file']
@@ -180,7 +65,7 @@ const didUpdateScript = await updateScriptFromGitHubIfNeeded(false);'''
           for mig in m.get('migrations', []):
               fp = Path('SkyReminderModules') / mig['file']
               mig['sha256'] = hashlib.sha256(fp.read_bytes()).hexdigest()
-          m['mainScriptFile']['sha256'] = hashlib.sha256(Path('Sky_星の子リマインダー.js').read_bytes()).hexdigest()
+          m['mainScriptFile']['sha256'] = hashlib.sha256(root.read_bytes()).hexdigest()
           manifest_path.write_text(json.dumps(m, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           PY
       - name: Validate
@@ -199,16 +84,14 @@ const didUpdateScript = await updateScriptFromGitHubIfNeeded(false);'''
               p=Path('SkyReminderModules')/x['file']
               assert hashlib.sha256(p.read_bytes()).hexdigest()==x['sha256'], x['file']
           assert hashlib.sha256(Path('Sky_星の子リマインダー.js').read_bytes()).hexdigest()==m['mainScriptFile']['sha256']
-          bundle='(async()=>{\n'+''.join((Path('SkyReminderModules')/x['file']).read_text()+'\n' for x in m['parts'])+'\n})()\n'
-          Path('/tmp/star-bundle.js').write_text(bundle)
           PY
-          node --check /tmp/star-bundle.js
-          ! grep -q 'skyCommonAction.*exportHtml' SkyReminderModules/007_shortcut_entrypoint.js
-      - name: Commit
+      - name: Commit and clean one-shot files
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Sky_星の子リマインダー.js Sky_今日の大キャン案内.js SkyReminderModules
-          git commit -m 'Prepare common refresh and update actions for public users'
+          rm -f .public-common-actions-trigger .action-create-ok .github/workflows/_test-create-trigger.yml .github/workflows/public-common-actions-once.yml
+          git add -A
+          git commit -m 'Prepare Sky sources for common settings refresh' || true
           git push origin main
+          git push origin --delete trigger-public-actions-20260818 || true

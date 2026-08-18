@@ -18,8 +18,10 @@ const CACHE_META_FILE = "image_cache_meta.json";
 const AUTOMATION_WARN_STATE_FILE = "automation_warn_state.json";
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const UPDATE_POLICIES = Object.freeze(["none", "daily", "always"]);
-const WIDGET_DEBUG_DIR = "HajimeSkyTools/_chatgpt-debug/widget-refresh";
+const WIDGET_DEBUG_DIR = "HajimeSkyTools/_internal/widget-refresh";
+const CANDLE_PERSIST_DIAGNOSTICS = false;
 function candleWidgetDebug(event, detail = {}) {
+  if (!CANDLE_PERSIST_DIAGNOSTICS) return;
   try {
     const fm = FileManager.iCloud();
     let dir = fm.documentsDirectory();
@@ -732,22 +734,13 @@ async function syncAllImages(progressCallback) {
 }
 function buildTextOutput(res, cacheMeta) {
   const lines = [];
-  lines.push(`基準LA時刻: ${res.laNow}`);
-  lines.push(`タイムゾーン: ${res.tzLabel}`);
-  lines.push(`Sky日付: ${res.skyYMD}`);
-  lines.push(`今日の画像: ${res.pattern.label}`);
-  lines.push(`地方: ${res.realm.jp} (${res.realm.en})`);
-  lines.push(`Rotation: ${res.rotIndex + 1}/${res.patternMeta.patterns.length}`);
-  if (res.cycle && res.cycle.source) lines.push(`サイクル: ${res.cycle.source}`);
+  lines.push(`日付: ${res.skyYMD}`);
+  lines.push(`今日の大キャン: ${res.pattern.label}`);
+  lines.push(`地方: ${res.realm.jp}`);
   lines.push("");
   lines.push(`見分け方: ${res.patternMeta.identifyDetailed}`);
   lines.push("");
-  res.pattern.detailed.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
-  lines.push("");
-  if (cacheMeta && cacheMeta.updatedAt) lines.push(`キャッシュ更新: ${cacheMeta.updatedAt}`);
-  lines.push(`保存画像数: ${getSavedImageCount()}/${getExpectedLabels().length}`);
-  lines.push("保存方式: ファイルシステム (Raw PNG)");
-  lines.push(`想定最小解像度: ${MIN_SOURCE_IMAGE_SIZE}x${MIN_SOURCE_IMAGE_SIZE}`);
+  res.pattern.detailed.forEach((text, i) => lines.push(`${i + 1}. ${text}`));
   return lines.join("\n");
 }
 function getWidgetCanvasSpec(family) {
@@ -887,11 +880,11 @@ async function createWidget(options = {}) {
   const res = calcForCurrentLATime();
   const meta = readCacheMeta();
   if (!isCacheUsable(meta)) {
-    return showErrorWidget("初回同期が必要", "アプリ内表示またはショートカット実行で画像を保存してください。");
+    return showErrorWidget("画像の準備が必要", "アプリを一度開いて画像を取得してください。");
   }
   let image = getCachedImage(res.pattern.label);
   if (!image) {
-    return showErrorWidget("画像読込エラー", res.pattern.label);
+    return showErrorWidget("画像を表示できません", res.pattern.label);
   }
   const family = config.widgetFamily || "medium";
   const widget = new ListWidget();
@@ -919,19 +912,12 @@ async function showSimpleAlert(title, message) {
 }
 function buildAppSummary(res, cacheMeta) {
   const lines = [];
-  const updateState = readUpdateState();
-  const policyLabel = updateState.policy === "none" ? "更新しない" : updateState.policy === "always" ? "毎回" : "24時間";
-  lines.push(`今日の画像: ${res.pattern.label}`);
+  lines.push(`今日の大キャン: ${res.pattern.label}`);
   lines.push(`地方: ${res.realm.jp}`);
-  lines.push(`Sky日付: ${res.skyYMD}`);
-  lines.push(`Rotation: ${res.rotIndex + 1}/${res.patternMeta.patterns.length}`);
-  lines.push(`基準LA時刻: ${res.laNow}`);
-  lines.push(`保存画像数: ${getSavedImageCount()}/${getExpectedLabels().length}`);
-  if (cacheMeta && cacheMeta.updatedAt) lines.push(`最終更新: ${cacheMeta.updatedAt}`);
-  if (cacheMeta) lines.push(`品質状態: ${needsQualityRefresh(cacheMeta) ? "再取得推奨" : "最新1280px想定"}`);
-  if (cacheMeta && cacheMeta.lastError) lines.push(`前回エラー: ${cacheMeta.lastError}`);
-  lines.push(`GitHub更新: ${policyLabel} / ${updateState.lastStatus || "未実行"}`);
-  lines.push(`最終確認: ${formatLocalDateTimeFromMs(updateState.lastCheckedAtMs)}`);
+  lines.push(`日付: ${res.skyYMD}`);
+  lines.push(`保存済み画像: ${getSavedImageCount()}/${getExpectedLabels().length}`);
+  if (cacheMeta && needsQualityRefresh(cacheMeta)) lines.push("画像の再取得をおすすめします");
+  if (cacheMeta && cacheMeta.lastError) lines.push("前回の画像取得でエラーがありました");
   return lines.join("\n");
 }
 async function previewTodayText() {
@@ -946,7 +932,7 @@ async function previewTodayImage() {
   const res = calcForCurrentLATime();
   const image = getCachedImage(res.pattern.label);
   if (!image) {
-    await showSimpleAlert("画像がありません", "画像キャッシュが未完成です。画像を取得 / 再取得を実行してください。");
+    await showSimpleAlert("画像がありません", "画像がまだ保存されていません。画像を取得 / 再取得してください。");
     return;
   }
   const composed = renderWidgetImageWithDate(image, "large", res.skyYMD);
@@ -967,7 +953,7 @@ async function runSyncAndReport() {
     const res = calcForCurrentLATime();
     const meta = readCacheMeta();
     const detail = String((e && e.message) || e || "unknown error");
-    await showSimpleAlert("同期に失敗しました", `${buildAppSummary(res, meta)}\n\n${detail}`);
+    await showSimpleAlert("画像の取得に失敗しました", `${buildAppSummary(res, meta)}\n\n${detail}`);
   }
 }
 async function resetCacheAndReport() {
@@ -978,7 +964,7 @@ async function resetCacheAndReport() {
   } catch (_) {}
   removeAllImageFiles();
   const res = calcForCurrentLATime();
-  await showSimpleAlert("キャッシュを削除しました", buildAppSummary(res, null));
+  await showSimpleAlert("保存済み画像を削除しました", buildAppSummary(res, null));
 }
 function restartThisScript() {
   try {
@@ -1013,7 +999,7 @@ async function runManualUpdateAndMaybeRestart() {
   const updated = await updateScriptFromGitHubIfNeeded(true);
   const after = readUpdateState();
   if (updated || Number(after.lastUpdatedAtMs || 0) > Number(before.lastUpdatedAtMs || 0)) {
-    await showSimpleAlert("更新しました", "GitHubから新しいスクリプトを保存しました。スクリプトを再起動します。");
+    await showSimpleAlert("更新しました", "新しいバージョンを保存しました。アプリを再起動します。");
     restartThisScript();
     Script.complete();
     return true;
@@ -1036,8 +1022,8 @@ async function presentApp() {
     alert.addAction("説明テキストを表示");
     alert.addAction("画像を取得 / 再取得");
     alert.addAction("Sky共通設定");
-    alert.addAction("今すぐ更新");
-    alert.addAction("データとキャッシュをリセット");
+    alert.addAction("更新を確認");
+    alert.addAction("保存済み画像をリセット");
     alert.addCancelAction("終了");
     const index = await alert.presentSheet();
     if (index === -1) break;
@@ -1074,8 +1060,24 @@ const didUpdateScript = await updateScriptFromGitHubIfNeeded(false);
 if (didUpdateScript) {
   console.log("GitHub update applied. It will take effect on the next run.");
 }
-const __commonAction = String(args?.queryParameters?.commonAction || "");
-  if (__commonAction === "githubUpdate") {
+const __commonAction = String(args?.queryParameters?.skyCommonAction || args?.queryParameters?.commonAction || "");
+  if (__commonAction === "refreshWidget") {
+    try {
+      const widget = await createWidget({ reason: "common-settings", refreshDelayMs: 60 * 1000 });
+      Script.setWidget(widget);
+    } catch (e) { try { console.error("Widget refresh failed:", e); } catch (_) {} }
+    try {
+      const parsed = JSON.parse(String(args?.queryParameters?.skyCommonChain || "[]"));
+      const chain = Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+      const next = chain.shift();
+      if (next) {
+        const isReminder = String(next).normalize("NFC").includes("星の子リマインダー");
+        const q = isReminder ? "action=commonrefresh" : "skyCommonAction=refreshWidget&skyCommonChain=" + encodeURIComponent(JSON.stringify(chain));
+        Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(next) + "&" + q);
+      }
+    } catch (_) {}
+    Script.complete();
+  } else if (__commonAction === "githubUpdate") {
     await runManualUpdateAndMaybeRestart();
     Script.complete();
   } else if (__commonAction === "reloadImages") {

@@ -30,7 +30,9 @@ const SKY_REMINDER_KNOWN_MIGRATIONS = Object.freeze({
 });
 const SKY_REMINDER_WIDGET_DEBUG_DIR = "HajimeSkyTools/_chatgpt-debug/widget-refresh";
 const SKY_REMINDER_WIDGET_DEBUG_FILE = "runtime.log";
+const SKY_REMINDER_PERSIST_DIAGNOSTICS = false;
 function skyReminderWidgetDebug(event, detail = {}) {
+  if (!SKY_REMINDER_PERSIST_DIAGNOSTICS) return;
   try {
     const fm = FileManager.iCloud();
     const root = fm.documentsDirectory();

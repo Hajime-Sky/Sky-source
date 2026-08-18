@@ -17,56 +17,72 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib, json, datetime
-
+          import hashlib, json, datetime, re
           def replace_once(text, old, new, label):
-              if old not in text:
-                  raise SystemExit(f'marker missing: {label}')
-              return text.replace(old, new, 1)
-
-          root = Path('Sky_星の子リマインダー.js')
-          s = root.read_text(encoding='utf-8')
+              if old not in text: raise SystemExit(f'marker missing: {label}')
+              return text.replace(old,new,1)
+          root=Path('Sky_星の子リマインダー.js'); s=root.read_text(encoding='utf-8')
           if 'SKY_REMINDER_PERSIST_DIAGNOSTICS' not in s:
-              s = replace_once(s,
-                  'const SKY_REMINDER_WIDGET_DEBUG_FILE = "runtime.log";\n',
-                  'const SKY_REMINDER_WIDGET_DEBUG_FILE = "runtime.log";\nconst SKY_REMINDER_PERSIST_DIAGNOSTICS = false;\n',
-                  'star diagnostic flag')
-              s = replace_once(s,
-                  'function skyReminderWidgetDebug(event, detail = {}) {\n  try {',
-                  'function skyReminderWidgetDebug(event, detail = {}) {\n  if (!SKY_REMINDER_PERSIST_DIAGNOSTICS) return;\n  try {',
-                  'star diagnostic guard')
-          root.write_text(s, encoding='utf-8')
+              s=replace_once(s,'const SKY_REMINDER_WIDGET_DEBUG_FILE = "runtime.log";\n','const SKY_REMINDER_WIDGET_DEBUG_FILE = "runtime.log";\nconst SKY_REMINDER_PERSIST_DIAGNOSTICS = false;\n','star diagnostic flag')
+              s=replace_once(s,'function skyReminderWidgetDebug(event, detail = {}) {\n  try {','function skyReminderWidgetDebug(event, detail = {}) {\n  if (!SKY_REMINDER_PERSIST_DIAGNOSTICS) return;\n  try {','star diagnostic guard')
+          root.write_text(s,encoding='utf-8')
 
-          p = Path('Sky_今日の大キャン案内.js')
-          s = p.read_text(encoding='utf-8')
+          p=Path('Sky_今日の大キャン案内.js'); s=p.read_text(encoding='utf-8')
           if 'CANDLE_PERSIST_DIAGNOSTICS' not in s:
-              s = replace_once(s,
-                  'const WIDGET_DEBUG_DIR = "HajimeSkyTools/_chatgpt-debug/widget-refresh";\n',
-                  'const WIDGET_DEBUG_DIR = "HajimeSkyTools/_internal/widget-refresh";\nconst CANDLE_PERSIST_DIAGNOSTICS = false;\n',
-                  'candle diagnostic flag')
-              s = replace_once(s,
-                  'function candleWidgetDebug(event, detail = {}) {\n  try {',
-                  'function candleWidgetDebug(event, detail = {}) {\n  if (!CANDLE_PERSIST_DIAGNOSTICS) return;\n  try {',
-                  'candle diagnostic guard')
-          s = s.replace('alert.addAction("今すぐ更新");', 'alert.addAction("更新を確認");')
-          old = '''const __commonAction = String(args?.queryParameters?.commonAction || "");\n  if (__commonAction === "githubUpdate") {'''
-          new = '''const __commonAction = String(args?.queryParameters?.skyCommonAction || args?.queryParameters?.commonAction || "");\n  if (__commonAction === "refreshWidget") {\n    try {\n      const widget = await createWidget({ reason: "common-settings", refreshDelayMs: 60 * 1000 });\n      Script.setWidget(widget);\n    } catch (e) { try { console.error("Widget refresh failed:", e); } catch (_) {} }\n    try {\n      const chain = JSON.parse(String(args?.queryParameters?.skyCommonChain || "[]"));\n      const list = Array.isArray(chain) ? chain.map(String).filter(Boolean) : [];\n      const next = list.shift();\n      if (next) {\n        const isReminder = String(next).normalize("NFC").includes("星の子リマインダー");\n        const q = isReminder\n          ? "action=commonrefresh"\n          : "skyCommonAction=refreshWidget&skyCommonChain=" + encodeURIComponent(JSON.stringify(list));\n        Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(next) + "&" + q);\n      }\n    } catch (_) {}\n    Script.complete();\n  } else if (__commonAction === "githubUpdate") {'''
-          if old in s:
-              s = replace_once(s, old, new, 'candle common refresh')
-          p.write_text(s, encoding='utf-8')
+              s=replace_once(s,'const WIDGET_DEBUG_DIR = "HajimeSkyTools/_chatgpt-debug/widget-refresh";\n','const WIDGET_DEBUG_DIR = "HajimeSkyTools/_internal/widget-refresh";\nconst CANDLE_PERSIST_DIAGNOSTICS = false;\n','candle diagnostic flag')
+              s=replace_once(s,'function candleWidgetDebug(event, detail = {}) {\n  try {','function candleWidgetDebug(event, detail = {}) {\n  if (!CANDLE_PERSIST_DIAGNOSTICS) return;\n  try {','candle diagnostic guard')
+          s=s.replace('alert.addAction("今すぐ更新");','alert.addAction("更新を確認");')
+          s=re.sub(r'function buildTextOutput\(res, cacheMeta\) \{[\s\S]*?\n\}\nfunction getWidgetCanvasSpec', '''function buildTextOutput(res, cacheMeta) {
+  const lines = [];
+  lines.push(`日付: ${res.skyYMD}`);
+  lines.push(`今日の大キャン: ${res.pattern.label}`);
+  lines.push(`地方: ${res.realm.jp}`);
+  lines.push("");
+  lines.push(`見分け方: ${res.patternMeta.identifyDetailed}`);
+  lines.push("");
+  res.pattern.detailed.forEach((text, i) => lines.push(`${i + 1}. ${text}`));
+  return lines.join("\\n");
+}
+function getWidgetCanvasSpec''', s, count=1)
+          s=re.sub(r'function buildAppSummary\(res, cacheMeta\) \{[\s\S]*?\n\}\nasync function previewTodayText', '''function buildAppSummary(res, cacheMeta) {
+  const lines = [];
+  lines.push(`今日の大キャン: ${res.pattern.label}`);
+  lines.push(`地方: ${res.realm.jp}`);
+  lines.push(`日付: ${res.skyYMD}`);
+  lines.push(`保存済み画像: ${getSavedImageCount()}/${getExpectedLabels().length}`);
+  if (cacheMeta && needsQualityRefresh(cacheMeta)) lines.push("画像の再取得をおすすめします");
+  if (cacheMeta && cacheMeta.lastError) lines.push("前回の画像取得でエラーがありました");
+  return lines.join("\\n");
+}
+async function previewTodayText''', s, count=1)
+          old='const __commonAction = String(args?.queryParameters?.commonAction || "");\n  if (__commonAction === "githubUpdate") {'
+          new='''const __commonAction = String(args?.queryParameters?.skyCommonAction || args?.queryParameters?.commonAction || "");
+  if (__commonAction === "refreshWidget") {
+    try {
+      const widget = await createWidget({ reason: "common-settings", refreshDelayMs: 60 * 1000 });
+      Script.setWidget(widget);
+    } catch (e) { try { console.error("Widget refresh failed:", e); } catch (_) {} }
+    try {
+      const parsed = JSON.parse(String(args?.queryParameters?.skyCommonChain || "[]"));
+      const chain = Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+      const next = chain.shift();
+      if (next) {
+        const isReminder = String(next).normalize("NFC").includes("星の子リマインダー");
+        const q = isReminder ? "action=commonrefresh" : "skyCommonAction=refreshWidget&skyCommonChain=" + encodeURIComponent(JSON.stringify(chain));
+        Safari.open("scriptable:///run?scriptName=" + encodeURIComponent(next) + "&" + q);
+      }
+    } catch (_) {}
+    Script.complete();
+  } else if (__commonAction === "githubUpdate") {'''
+          if old in s: s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
 
-          manifest_path = Path('SkyReminderModules/manifest.json')
-          m = json.loads(manifest_path.read_text(encoding='utf-8'))
-          m['sourceVersion'] = 'v2.28_public_ready'
-          m['generatedAt'] = datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z')
-          for part in m.get('parts', []):
-              fp = Path('SkyReminderModules') / part['file']
-              part['sha256'] = hashlib.sha256(fp.read_bytes()).hexdigest()
-          for mig in m.get('migrations', []):
-              fp = Path('SkyReminderModules') / mig['file']
-              mig['sha256'] = hashlib.sha256(fp.read_bytes()).hexdigest()
-          m['mainScriptFile']['sha256'] = hashlib.sha256(root.read_bytes()).hexdigest()
-          manifest_path.write_text(json.dumps(m, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          mp=Path('SkyReminderModules/manifest.json'); m=json.loads(mp.read_text(encoding='utf-8'))
+          m['sourceVersion']='v2.28_public_ready'; m['generatedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z')
+          for x in m.get('parts',[]): x['sha256']=hashlib.sha256((Path('SkyReminderModules')/x['file']).read_bytes()).hexdigest()
+          for x in m.get('migrations',[]): x['sha256']=hashlib.sha256((Path('SkyReminderModules')/x['file']).read_bytes()).hexdigest()
+          m['mainScriptFile']['sha256']=hashlib.sha256(root.read_bytes()).hexdigest()
+          mp.write_text(json.dumps(m,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
       - name: Validate
         shell: bash
@@ -78,13 +94,13 @@ jobs:
           from pathlib import Path
           m=json.loads(Path('SkyReminderModules/manifest.json').read_text())
           for x in m['parts']:
-              p=Path('SkyReminderModules')/x['file']
-              assert hashlib.sha256(p.read_bytes()).hexdigest()==x['sha256'], x['file']
+              p=Path('SkyReminderModules')/x['file']; assert hashlib.sha256(p.read_bytes()).hexdigest()==x['sha256']
           for x in m.get('migrations',[]):
-              p=Path('SkyReminderModules')/x['file']
-              assert hashlib.sha256(p.read_bytes()).hexdigest()==x['sha256'], x['file']
+              p=Path('SkyReminderModules')/x['file']; assert hashlib.sha256(p.read_bytes()).hexdigest()==x['sha256']
           assert hashlib.sha256(Path('Sky_星の子リマインダー.js').read_bytes()).hexdigest()==m['mainScriptFile']['sha256']
           PY
+          ! grep -q 'Rotation:' 'Sky_今日の大キャン案内.js'
+          ! grep -q '最新1280px想定' 'Sky_今日の大キャン案内.js'
       - name: Commit and clean one-shot files
         shell: bash
         run: |
@@ -92,6 +108,6 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           rm -f .public-common-actions-trigger .action-create-ok .github/workflows/_test-create-trigger.yml .github/workflows/public-common-actions-once.yml
           git add -A
-          git commit -m 'Prepare Sky sources for common settings refresh' || true
+          git commit -m 'Prepare Sky sources for general users' || true
           git push origin main
           git push origin --delete trigger-public-actions-20260818 || true

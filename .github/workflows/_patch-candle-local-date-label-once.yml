@@ -1,12 +1,13 @@
 name: Patch candle local date label once
 on:
-  push:
-    paths:
-      - '.github/workflows/_patch-candle-local-date-label-once.yml'
+  issues:
+    types: [opened]
 permissions:
   contents: write
+  issues: write
 jobs:
   patch:
+    if: github.event.issue.title == '[internal] patch candle local date label'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,28 +42,17 @@ function formatTreasureWidgetDateText(reference, skyYMD) {
 }
 '''
           if 'function formatTreasureWidgetDateText(' not in s:
-              if marker not in s:
-                  raise SystemExit('render marker not found')
+              if marker not in s: raise SystemExit('render marker not found')
               s = s.replace(marker, helper + marker, 1)
-          old = 'async function createWidget(options = {}) {\n  const res = calcForCurrentLATime();'
-          new = 'async function createWidget(options = {}) {\n  const referenceNow = getSkyCommonNow();\n  const res = calcForCurrentLATime(referenceNow);'
-          if new not in s:
-              if old not in s: raise SystemExit('createWidget marker not found')
-              s = s.replace(old, new, 1)
-          old = 'let bgImage = renderWidgetImageWithDate(image, family, res.skyYMD);'
-          new = 'let bgImage = renderWidgetImageWithDate(image, family, formatTreasureWidgetDateText(referenceNow, res.skyYMD));'
-          if new not in s:
-              if old not in s: raise SystemExit('widget render call not found')
-              s = s.replace(old, new, 1)
-          old = 'async function previewTodayImage() {\n  const res = calcForCurrentLATime();'
-          new = 'async function previewTodayImage() {\n  const referenceNow = getSkyCommonNow();\n  const res = calcForCurrentLATime(referenceNow);'
-          if new not in s:
-              if old not in s: raise SystemExit('preview marker not found')
-              s = s.replace(old, new, 1)
-          old = 'const composed = renderWidgetImageWithDate(image, "large", res.skyYMD);'
-          new = 'const composed = renderWidgetImageWithDate(image, "large", formatTreasureWidgetDateText(referenceNow, res.skyYMD));'
-          if new not in s:
-              if old not in s: raise SystemExit('preview render call not found')
+          replacements = [
+            ('async function createWidget(options = {}) {\n  const res = calcForCurrentLATime();', 'async function createWidget(options = {}) {\n  const referenceNow = getSkyCommonNow();\n  const res = calcForCurrentLATime(referenceNow);'),
+            ('let bgImage = renderWidgetImageWithDate(image, family, res.skyYMD);', 'let bgImage = renderWidgetImageWithDate(image, family, formatTreasureWidgetDateText(referenceNow, res.skyYMD));'),
+            ('async function previewTodayImage() {\n  const res = calcForCurrentLATime();', 'async function previewTodayImage() {\n  const referenceNow = getSkyCommonNow();\n  const res = calcForCurrentLATime(referenceNow);'),
+            ('const composed = renderWidgetImageWithDate(image, "large", res.skyYMD);', 'const composed = renderWidgetImageWithDate(image, "large", formatTreasureWidgetDateText(referenceNow, res.skyYMD));'),
+          ]
+          for old, new in replacements:
+              if new in s: continue
+              if old not in s: raise SystemExit('replacement marker not found: ' + old[:60])
               s = s.replace(old, new, 1)
           p.write_text(s, encoding='utf-8')
           PY
@@ -74,7 +64,12 @@ function formatTreasureWidgetDateText(reference, skyYMD) {
           git config user.name 'Hajime-Sky'
           git config user.email 'hajikun1511+github-1@gmail.com'
           git add 'Sky_今日の大キャン案内.js'
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Restore local update-window date label'
-          git push
-# trigger
+          if ! git diff --cached --quiet; then
+            git commit -m 'Restore local update-window date label'
+            git push
+          fi
+      - name: Close trigger issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue close '${{ github.event.issue.number }}' --reason completed

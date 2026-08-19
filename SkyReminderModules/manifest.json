@@ -6,8 +6,8 @@
     "sha256": "b0bf3009de50751eb020d0bd7192e6cda8fc0df9be88ca0f779b4b12fc0c97dd",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.28_public_ready",
-  "generatedAt": "2026-08-18T04:15:39.496885Z",
+  "sourceVersion": "v2.29_widget_render_cache",
+  "generatedAt": "2026-08-19T04:55:00Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -113,6 +113,13 @@
       "role": "GitHub update metadata and manifest-diff planning helpers.",
       "sourceLines": "new",
       "sha256": "66b56df7f1e049abf5ef0dddd09c8389c1320fc2d3c9b5ab1de5b142b370d354",
+      "url": ""
+    },
+    {
+      "file": "008a_widget_render_cache.js",
+      "role": "Reusable widget background render cache to reduce repeated DrawContext work and peak memory.",
+      "sourceLines": "new",
+      "sha256": "c2e9f8b2dd1479fedb857c0c089868c7e190e3b51a19073860d04f8f451fc791",
       "url": ""
     },
     {

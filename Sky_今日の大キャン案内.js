@@ -41,7 +41,8 @@ async function skyCandleLoadRuntime() {
 function skyCandlePatchRuntime(source) {
   let s = String(source || "");
   const renderMarker = "function renderWidgetImageWithDate(image, family, dateText) {";
-  const helper = `function getTreasureWidgetLocalDateContext(reference = new Date()) {
+  const helper = `const SKY_CANDLE_WIDGET_RENDER_CACHE_REV = "2026-08-19-v2";
+function getTreasureWidgetLocalDateContext(reference = new Date()) {
   const d = reference instanceof Date ? reference : new Date(reference);
   const common = readSkyCommonSettingsSafe();
   if (common && common.timezone && common.timezone.mode === "manual") {
@@ -49,10 +50,10 @@ function skyCandlePatchRuntime(source) {
     if (Number.isFinite(offsetHours)) {
       const offsetMinutes = offsetHours * 60;
       const shifted = new Date(d.getTime() + offsetMinutes * 60 * 1000);
-      return { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1, day: shifted.getUTCDate(), offsetMinutes };
+      return { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1, day: shifted.getUTCDate(), offsetMinutes, manual: true };
     }
   }
-  return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(), offsetMinutes: -d.getTimezoneOffset() };
+  return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(), offsetMinutes: -d.getTimezoneOffset(), manual: false };
 }
 function formatTreasureWidgetDateText(reference, skyYMD) {
   const local = getTreasureWidgetLocalDateContext(reference);
@@ -72,27 +73,201 @@ function formatTreasureWidgetDateText(reference, skyYMD) {
   }
   return String(local.month) + "月" + String(local.day) + "日　" + phase;
 }
+function treasureWidgetRenderCacheEnabled() {
+  const common = readSkyCommonSettingsSafe();
+  return !(common && common.cache && common.cache.enabled === false);
+}
+function treasureWidgetRenderCacheHash(text) {
+  let h = 2166136261;
+  const s = String(text || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+function treasureWidgetRenderCacheDir() {
+  const fm = FileManager.local();
+  let dir = fm.documentsDirectory();
+  for (const part of ["HajimeSkyTools", "treasure-candles", "widget-render-cache", SKY_CANDLE_WIDGET_RENDER_CACHE_REV]) {
+    dir = fm.joinPath(dir, part);
+    if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+  }
+  return { fm, dir };
+}
+function treasureWidgetSourceStamp(label) {
+  try {
+    const fm = getICloudFileManager();
+    const path = getImagePath(label);
+    if (!fm.fileExists(path)) return "";
+    const d = typeof fm.modificationDate === "function" ? fm.modificationDate(path) : null;
+    const size = typeof fm.fileSize === "function" ? Number(fm.fileSize(path)) || 0 : 0;
+    return String(d instanceof Date ? d.getTime() : "") + ":" + String(size);
+  } catch (_) { return ""; }
+}
+function treasureWidgetDeviceScale() {
+  try { return Math.max(1, Number(Device.screenScale()) || 2); } catch (_) { return 2; }
+}
+function treasureWidgetRenderDescriptor(res, family, reference) {
+  const label = String(res && res.pattern && res.pattern.label || "");
+  const dateText = formatTreasureWidgetDateText(reference, res && res.skyYMD);
+  const raw = JSON.stringify({
+    rev: SKY_CANDLE_WIDGET_RENDER_CACHE_REV,
+    family: String(family || "medium"),
+    label,
+    skyYMD: String(res && res.skyYMD || ""),
+    dateText,
+    scale: treasureWidgetDeviceScale(),
+    source: treasureWidgetSourceStamp(label)
+  });
+  const { fm, dir } = treasureWidgetRenderCacheDir();
+  const path = fm.joinPath(dir, treasureWidgetRenderCacheHash(raw) + ".png");
+  return { fm, dir, path, dateText, raw };
+}
+function treasureWidgetHasRenderedCache(res, family, reference) {
+  if (!treasureWidgetRenderCacheEnabled()) return false;
+  try {
+    const d = treasureWidgetRenderDescriptor(res, family, reference);
+    return d.fm.fileExists(d.path);
+  } catch (_) { return false; }
+}
+function treasureWidgetReadRenderedCache(res, family, reference) {
+  if (!treasureWidgetRenderCacheEnabled()) return null;
+  try {
+    const d = treasureWidgetRenderDescriptor(res, family, reference);
+    if (!d.fm.fileExists(d.path)) return null;
+    try {
+      if (typeof d.fm.isFileDownloaded === "function" && !d.fm.isFileDownloaded(d.path)) d.fm.downloadFileFromiCloud(d.path);
+    } catch (_) {}
+    return Image.fromFile(d.path);
+  } catch (_) { return null; }
+}
+function treasureWidgetPruneRenderedCache(dir, fm, keep = 36) {
+  try {
+    const files = fm.listContents(dir).filter(x => String(x).endsWith(".png"));
+    if (files.length <= keep) return;
+    const rows = files.map(name => {
+      const path = fm.joinPath(dir, name);
+      let t = 0;
+      try {
+        const d = typeof fm.modificationDate === "function" ? fm.modificationDate(path) : null;
+        t = d instanceof Date ? d.getTime() : 0;
+      } catch (_) {}
+      return { path, t };
+    }).sort((a, b) => a.t - b.t);
+    for (const row of rows.slice(0, Math.max(0, rows.length - keep))) {
+      try { fm.remove(row.path); } catch (_) {}
+    }
+  } catch (_) {}
+}
+function treasureWidgetWriteRenderedCache(res, family, reference, image) {
+  if (!treasureWidgetRenderCacheEnabled() || !image) return;
+  try {
+    const d = treasureWidgetRenderDescriptor(res, family, reference);
+    d.fm.writeImage(d.path, image);
+    treasureWidgetPruneRenderedCache(d.dir, d.fm);
+  } catch (_) {}
+}
+function treasureWidgetRenderCurrent(res, family, reference) {
+  let image = getCachedImage(res.pattern.label);
+  if (!image) return null;
+  const rendered = renderWidgetImageWithDate(image, family, formatTreasureWidgetDateText(reference, res.skyYMD));
+  image = null;
+  treasureWidgetWriteRenderedCache(res, family, reference, rendered);
+  return rendered;
+}
+function treasureWidgetNextLaUpdate(reference) {
+  const d = reference instanceof Date ? reference : new Date(reference);
+  const la = getCurrentLATimeParts(d);
+  const wall = Date.UTC(la.year, la.month - 1, la.day + 1, 0, 1, 0);
+  let offset = Number(getLaOffsetInfo(d).offsetMinutes) || -480;
+  let ms = wall - offset * 60000;
+  for (let i = 0; i < 2; i++) {
+    const nextOffset = Number(getLaOffsetInfo(new Date(ms)).offsetMinutes);
+    if (!Number.isFinite(nextOffset) || nextOffset === offset) break;
+    offset = nextOffset;
+    ms = wall - offset * 60000;
+  }
+  return new Date(ms);
+}
+function treasureWidgetNextLocalMidnight(reference) {
+  const d = reference instanceof Date ? reference : new Date(reference);
+  const local = getTreasureWidgetLocalDateContext(d);
+  if (local.manual) {
+    const wall = Date.UTC(local.year, local.month - 1, local.day + 1, 0, 1, 0);
+    return new Date(wall - Number(local.offsetMinutes || 0) * 60000);
+  }
+  return new Date(local.year, local.month - 1, local.day + 1, 0, 1, 0);
+}
+function treasureWidgetPrewarmOne(reference, currentFamily) {
+  if (!treasureWidgetRenderCacheEnabled()) return false;
+  const now = reference instanceof Date ? reference : new Date(reference);
+  const candidates = [
+    treasureWidgetNextLocalMidnight(now),
+    treasureWidgetNextLaUpdate(now)
+  ].filter(d => d instanceof Date && Number.isFinite(d.getTime()) && d.getTime() > now.getTime());
+  const families = Array.from(new Set([String(currentFamily || "medium"), "small", "medium", "large"]));
+  for (const future of candidates) {
+    const res = calcForCurrentLATime(future);
+    for (const family of families) {
+      if (treasureWidgetHasRenderedCache(res, family, future)) continue;
+      let rendered = treasureWidgetRenderCurrent(res, family, future);
+      rendered = null;
+      return true;
+    }
+  }
+  return false;
+}
 `;
   if (!s.includes("function formatTreasureWidgetDateText(")) {
     if (!s.includes(renderMarker)) throw new Error("日付表示の描画位置を確認できませんでした");
     s = s.replace(renderMarker, helper + renderMarker);
   }
+
+  const createStart = s.indexOf("async function createWidget(options = {}) {");
+  const createEnd = s.indexOf("async function showSimpleAlert", createStart);
+  if (createStart < 0 || createEnd < 0) throw new Error("ウィジェット生成処理を確認できませんでした");
+  const createWidget = `async function createWidget(options = {}) {
+  const referenceNow = getSkyCommonNow();
+  const res = calcForCurrentLATime(referenceNow);
+  const meta = readCacheMeta();
+  if (!isCacheUsable(meta)) {
+    return showErrorWidget("画像の準備が必要", "アプリを一度開いて画像を取得してください。");
+  }
+  const family = config.widgetFamily || "medium";
+  const cacheEnabled = treasureWidgetRenderCacheEnabled();
+  const hadRenderedCache = cacheEnabled && treasureWidgetHasRenderedCache(res, family, referenceNow);
+  if (hadRenderedCache) {
+    try { treasureWidgetPrewarmOne(referenceNow, family); } catch (_) {}
+  }
+  let bgImage = hadRenderedCache ? treasureWidgetReadRenderedCache(res, family, referenceNow) : null;
+  if (!bgImage) {
+    bgImage = treasureWidgetRenderCurrent(res, family, referenceNow);
+    if (!bgImage) return showErrorWidget("画像を表示できません", res.pattern.label);
+  }
+  const widget = new ListWidget();
+  const refreshDelayMs = Math.max(60 * 1000, Number(options.refreshDelayMs || 30 * 60 * 1000) || 30 * 60 * 1000);
+  widget.refreshAfterDate = new Date(Date.now() + refreshDelayMs);
+  const debugReason = String(options.reason || (config.runsInWidget ? "widget-timeline" : "manual-set"));
+  candleWidgetDebug("widget-build", { reason: debugReason, family, skyYMD: res.skyYMD, pattern: res.pattern.label, renderedCacheHit: hadRenderedCache, refreshAfter: widget.refreshAfterDate.toISOString() });
+  widget.url = URLScheme.forRunningScript();
+  widget.backgroundColor = new Color("#000000");
+  widget.backgroundImage = bgImage;
+  bgImage = null;
+  candleWidgetDebug("widget-return", { reason: debugReason, family });
+  return widget;
+}
+`;
+  s = s.slice(0, createStart) + createWidget + s.slice(createEnd);
+
   const replacements = [
     [
-      "async function createWidget(options = {}) {\n  const res = calcForCurrentLATime();",
-      "async function createWidget(options = {}) {\n  const referenceNow = getSkyCommonNow();\n  const res = calcForCurrentLATime(referenceNow);"
+      "async function previewTodayImage() {\\n  const res = calcForCurrentLATime();",
+      "async function previewTodayImage() {\\n  const referenceNow = getSkyCommonNow();\\n  const res = calcForCurrentLATime(referenceNow);"
     ],
     [
-      "let bgImage = renderWidgetImageWithDate(image, family, res.skyYMD);",
-      "let bgImage = renderWidgetImageWithDate(image, family, formatTreasureWidgetDateText(referenceNow, res.skyYMD));"
-    ],
-    [
-      "async function previewTodayImage() {\n  const res = calcForCurrentLATime();",
-      "async function previewTodayImage() {\n  const referenceNow = getSkyCommonNow();\n  const res = calcForCurrentLATime(referenceNow);"
-    ],
-    [
-      "const composed = renderWidgetImageWithDate(image, \"large\", res.skyYMD);",
-      "const composed = renderWidgetImageWithDate(image, \"large\", formatTreasureWidgetDateText(referenceNow, res.skyYMD));"
+      'const composed = renderWidgetImageWithDate(image, "large", res.skyYMD);',
+      'const composed = renderWidgetImageWithDate(image, "large", formatTreasureWidgetDateText(referenceNow, res.skyYMD));'
     ]
   ];
   for (const [before, after] of replacements) {
@@ -133,7 +308,7 @@ async function skyCandleShowLoaderError(error) {
 
 try {
   const runtime = skyCandlePatchRuntime(await skyCandleLoadRuntime());
-  await eval(`(async()=>{\n${runtime}\n})()`);
+  await eval(`(async()=>{\\n${runtime}\\n})()`);
 } catch (error) {
   await skyCandleShowLoaderError(error);
 }

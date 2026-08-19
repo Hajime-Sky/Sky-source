@@ -6,8 +6,8 @@
     "sha256": "b0bf3009de50751eb020d0bd7192e6cda8fc0df9be88ca0f779b4b12fc0c97dd",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.29_widget_render_cache",
-  "generatedAt": "2026-08-19T04:55:00Z",
+  "sourceVersion": "v2.30_widget_cache_generation",
+  "generatedAt": "2026-08-19T05:45:00Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -117,9 +117,9 @@
     },
     {
       "file": "008a_widget_render_cache.js",
-      "role": "Reusable widget background render cache to reduce repeated DrawContext work and peak memory.",
+      "role": "Reusable widget background cache with source-generation invalidation to reduce repeated DrawContext work and peak memory.",
       "sourceLines": "new",
-      "sha256": "c2e9f8b2dd1479fedb857c0c089868c7e190e3b51a19073860d04f8f451fc791",
+      "sha256": "ca4b1cdfb5deb8eec57f4973b79605de59ec1f25a8a607f4af16332879beafc5",
       "url": ""
     },
     {

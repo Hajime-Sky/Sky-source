@@ -41,7 +41,7 @@ async function skyCandleLoadRuntime() {
 function skyCandlePatchRuntime(source) {
   let s = String(source || "");
   const renderMarker = "function renderWidgetImageWithDate(image, family, dateText) {";
-  const helper = `const SKY_CANDLE_WIDGET_RENDER_CACHE_REV = "2026-08-19-v2";
+  const helper = `const SKY_CANDLE_WIDGET_RENDER_CACHE_REV = "2026-08-19-v3";
 function getTreasureWidgetLocalDateContext(reference = new Date()) {
   const d = reference instanceof Date ? reference : new Date(reference);
   const common = readSkyCommonSettingsSafe();
@@ -87,13 +87,57 @@ function treasureWidgetRenderCacheHash(text) {
   return h.toString(16).padStart(8, "0");
 }
 function treasureWidgetRenderCacheDir() {
-  const fm = FileManager.local();
+  const fm = getICloudFileManager();
   let dir = fm.documentsDirectory();
-  for (const part of ["HajimeSkyTools", "treasure-candles", "widget-render-cache", SKY_CANDLE_WIDGET_RENDER_CACHE_REV]) {
+  for (const part of ["HajimeSkyTools", "treasure-candles", "widget-render-cache"]) {
     dir = fm.joinPath(dir, part);
     if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
   }
   return { fm, dir };
+}
+function treasureWidgetCodeSourceStamp() {
+  try {
+    const fm = getICloudFileManager();
+    const root = fm.documentsDirectory();
+    const paths = [
+      "HajimeSkyTools/common-settings.js",
+      "HajimeSkyTools/treasure-candles/runtime-v1.js"
+    ];
+    try {
+      const scriptName = String(Script.name() || "");
+      if (scriptName) paths.push(scriptName + ".js");
+    } catch (_) {}
+    return paths.map(rel => {
+      try {
+        const path = fm.joinPath(root, rel);
+        if (!fm.fileExists(path)) return rel + ":missing";
+        const d = typeof fm.modificationDate === "function" ? fm.modificationDate(path) : null;
+        const size = typeof fm.fileSize === "function" ? Number(fm.fileSize(path)) || 0 : 0;
+        return rel + ":" + String(d instanceof Date ? d.getTime() : 0) + ":" + String(size);
+      } catch (_) { return rel + ":error"; }
+    }).join("|");
+  } catch (_) { return SKY_CANDLE_WIDGET_RENDER_CACHE_REV; }
+}
+function treasureWidgetCacheGeneration() {
+  if (globalThis.__SKY_CANDLE_WIDGET_CACHE_GENERATION) return globalThis.__SKY_CANDLE_WIDGET_CACHE_GENERATION;
+  const d = treasureWidgetRenderCacheDir();
+  const stamp = treasureWidgetCodeSourceStamp();
+  const marker = d.fm.joinPath(d.dir, "source-generation.txt");
+  let previous = "";
+  try {
+    if (d.fm.fileExists(marker)) previous = d.fm.readString(marker);
+  } catch (_) {}
+  if (previous !== stamp) {
+    try {
+      for (const name of d.fm.listContents(d.dir)) {
+        if (name === "source-generation.txt") continue;
+        try { d.fm.remove(d.fm.joinPath(d.dir, name)); } catch (_) {}
+      }
+    } catch (_) {}
+    try { d.fm.writeString(marker, stamp); } catch (_) {}
+  }
+  globalThis.__SKY_CANDLE_WIDGET_CACHE_GENERATION = stamp;
+  return stamp;
 }
 function treasureWidgetSourceStamp(label) {
   try {
@@ -113,6 +157,7 @@ function treasureWidgetRenderDescriptor(res, family, reference) {
   const dateText = formatTreasureWidgetDateText(reference, res && res.skyYMD);
   const raw = JSON.stringify({
     rev: SKY_CANDLE_WIDGET_RENDER_CACHE_REV,
+    generation: treasureWidgetCacheGeneration(),
     family: String(family || "medium"),
     label,
     skyYMD: String(res && res.skyYMD || ""),
@@ -131,15 +176,15 @@ function treasureWidgetHasRenderedCache(res, family, reference) {
     return d.fm.fileExists(d.path);
   } catch (_) { return false; }
 }
-function treasureWidgetReadRenderedCache(res, family, reference) {
+async function treasureWidgetReadRenderedCache(res, family, reference) {
   if (!treasureWidgetRenderCacheEnabled()) return null;
   try {
     const d = treasureWidgetRenderDescriptor(res, family, reference);
     if (!d.fm.fileExists(d.path)) return null;
     try {
-      if (typeof d.fm.isFileDownloaded === "function" && !d.fm.isFileDownloaded(d.path)) d.fm.downloadFileFromiCloud(d.path);
+      if (typeof d.fm.isFileDownloaded === "function" && !d.fm.isFileDownloaded(d.path)) await d.fm.downloadFileFromiCloud(d.path);
     } catch (_) {}
-    return Image.fromFile(d.path);
+    return d.fm.readImage(d.path);
   } catch (_) { return null; }
 }
 function treasureWidgetPruneRenderedCache(dir, fm, keep = 36) {
@@ -161,12 +206,13 @@ function treasureWidgetPruneRenderedCache(dir, fm, keep = 36) {
   } catch (_) {}
 }
 function treasureWidgetWriteRenderedCache(res, family, reference, image) {
-  if (!treasureWidgetRenderCacheEnabled() || !image) return;
+  if (!treasureWidgetRenderCacheEnabled() || !image) return false;
   try {
     const d = treasureWidgetRenderDescriptor(res, family, reference);
     d.fm.writeImage(d.path, image);
     treasureWidgetPruneRenderedCache(d.dir, d.fm);
-  } catch (_) {}
+    return d.fm.fileExists(d.path);
+  } catch (_) { return false; }
 }
 function treasureWidgetRenderCurrent(res, family, reference) {
   let image = getCachedImage(res.pattern.label);
@@ -199,8 +245,8 @@ function treasureWidgetNextLocalMidnight(reference) {
   }
   return new Date(local.year, local.month - 1, local.day + 1, 0, 1, 0);
 }
-function treasureWidgetPrewarmOne(reference, currentFamily) {
-  if (!treasureWidgetRenderCacheEnabled()) return false;
+function treasureWidgetPendingPrewarms(reference, currentFamily) {
+  if (!treasureWidgetRenderCacheEnabled()) return [];
   const now = reference instanceof Date ? reference : new Date(reference);
   const candidates = [
     treasureWidgetNextLocalMidnight(now),
@@ -208,16 +254,23 @@ function treasureWidgetPrewarmOne(reference, currentFamily) {
   ].filter(d => d instanceof Date && Number.isFinite(d.getTime()) && d.getTime() > now.getTime())
     .sort((a, b) => a.getTime() - b.getTime());
   const families = Array.from(new Set([String(currentFamily || "medium"), "small", "medium", "large"]));
+  const pending = [];
   for (const future of candidates) {
     const res = calcForCurrentLATime(future);
     for (const family of families) {
-      if (treasureWidgetHasRenderedCache(res, family, future)) continue;
-      let rendered = treasureWidgetRenderCurrent(res, family, future);
-      rendered = null;
-      return true;
+      if (!treasureWidgetHasRenderedCache(res, family, future)) pending.push({ future, res, family });
     }
   }
-  return false;
+  return pending;
+}
+function treasureWidgetPrewarmOne(reference, currentFamily) {
+  const pending = treasureWidgetPendingPrewarms(reference, currentFamily);
+  if (!pending.length) return { generated: false, remaining: 0 };
+  const task = pending[0];
+  let rendered = treasureWidgetRenderCurrent(task.res, task.family, task.future);
+  const generated = !!rendered;
+  rendered = null;
+  return { generated, remaining: generated ? Math.max(0, pending.length - 1) : pending.length };
 }
 `;
   if (!s.includes("function formatTreasureWidgetDateText(")) {
@@ -237,20 +290,26 @@ function treasureWidgetPrewarmOne(reference, currentFamily) {
   }
   const family = config.widgetFamily || "medium";
   const cacheEnabled = treasureWidgetRenderCacheEnabled();
+  if (cacheEnabled) treasureWidgetCacheGeneration();
   const hadRenderedCache = cacheEnabled && treasureWidgetHasRenderedCache(res, family, referenceNow);
+  let prewarm = { generated: false, remaining: 0 };
   if (hadRenderedCache) {
-    try { treasureWidgetPrewarmOne(referenceNow, family); } catch (_) {}
+    try { prewarm = treasureWidgetPrewarmOne(referenceNow, family); } catch (_) {}
   }
-  let bgImage = hadRenderedCache ? treasureWidgetReadRenderedCache(res, family, referenceNow) : null;
+  let bgImage = hadRenderedCache ? await treasureWidgetReadRenderedCache(res, family, referenceNow) : null;
+  let generatedCurrent = false;
   if (!bgImage) {
     bgImage = treasureWidgetRenderCurrent(res, family, referenceNow);
+    generatedCurrent = true;
     if (!bgImage) return showErrorWidget("画像を表示できません", res.pattern.label);
   }
   const widget = new ListWidget();
-  const refreshDelayMs = Math.max(60 * 1000, Number(options.refreshDelayMs || 30 * 60 * 1000) || 30 * 60 * 1000);
+  const needSoon = cacheEnabled && (generatedCurrent || prewarm.remaining > 0);
+  const defaultDelayMs = needSoon ? 10 * 60 * 1000 : 30 * 60 * 1000;
+  const refreshDelayMs = Math.max(60 * 1000, Number(options.refreshDelayMs || defaultDelayMs) || defaultDelayMs);
   widget.refreshAfterDate = new Date(Date.now() + refreshDelayMs);
   const debugReason = String(options.reason || (config.runsInWidget ? "widget-timeline" : "manual-set"));
-  candleWidgetDebug("widget-build", { reason: debugReason, family, skyYMD: res.skyYMD, pattern: res.pattern.label, renderedCacheHit: hadRenderedCache, refreshAfter: widget.refreshAfterDate.toISOString() });
+  candleWidgetDebug("widget-build", { reason: debugReason, family, skyYMD: res.skyYMD, pattern: res.pattern.label, renderedCacheHit: hadRenderedCache, generatedCurrent, prewarmGenerated: prewarm.generated, prewarmRemaining: prewarm.remaining, refreshAfter: widget.refreshAfterDate.toISOString() });
   widget.url = URLScheme.forRunningScript();
   widget.backgroundColor = new Color("#000000");
   widget.backgroundImage = bgImage;

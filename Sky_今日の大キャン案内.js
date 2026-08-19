@@ -41,7 +41,7 @@ async function skyCandleLoadRuntime() {
 function skyCandlePatchRuntime(source) {
   let s = String(source || "");
   const renderMarker = "function renderWidgetImageWithDate(image, family, dateText) {";
-  const helper = `const SKY_CANDLE_WIDGET_RENDER_CACHE_REV = "2026-08-19-v3";
+  const helper = `const SKY_CANDLE_WIDGET_RENDER_CACHE_REV = "2026-08-19-v4";
 function getTreasureWidgetLocalDateContext(reference = new Date()) {
   const d = reference instanceof Date ? reference : new Date(reference);
   const common = readSkyCommonSettingsSafe();
@@ -245,6 +245,36 @@ function treasureWidgetNextLocalMidnight(reference) {
   }
   return new Date(local.year, local.month - 1, local.day + 1, 0, 1, 0);
 }
+function treasureWidgetPruneObsolete(reference) {
+  if (!treasureWidgetRenderCacheEnabled()) return;
+  try {
+    const now = reference instanceof Date ? reference : new Date(reference);
+    const refs = [now, treasureWidgetNextLocalMidnight(now), treasureWidgetNextLaUpdate(now)]
+      .filter(d => d instanceof Date && Number.isFinite(d.getTime()));
+    const uniqueRefs = [];
+    const seenTimes = new Set();
+    for (const ref of refs) {
+      const key = String(ref.getTime());
+      if (seenTimes.has(key)) continue;
+      seenTimes.add(key);
+      uniqueRefs.push(ref);
+    }
+    const keep = new Set();
+    for (const ref of uniqueRefs) {
+      const res = calcForCurrentLATime(ref);
+      for (const family of ["small", "medium", "large"]) {
+        try { keep.add(treasureWidgetRenderDescriptor(res, family, ref).path); } catch (_) {}
+      }
+    }
+    const d = treasureWidgetRenderCacheDir();
+    for (const name of d.fm.listContents(d.dir)) {
+      if (name === "source-generation.txt" || !String(name).endsWith(".png")) continue;
+      const path = d.fm.joinPath(d.dir, name);
+      if (keep.has(path)) continue;
+      try { d.fm.remove(path); } catch (_) {}
+    }
+  } catch (_) {}
+}
 function treasureWidgetPendingPrewarms(reference, currentFamily) {
   if (!treasureWidgetRenderCacheEnabled()) return [];
   const now = reference instanceof Date ? reference : new Date(reference);
@@ -290,7 +320,10 @@ function treasureWidgetPrewarmOne(reference, currentFamily) {
   }
   const family = config.widgetFamily || "medium";
   const cacheEnabled = treasureWidgetRenderCacheEnabled();
-  if (cacheEnabled) treasureWidgetCacheGeneration();
+  if (cacheEnabled) {
+    treasureWidgetCacheGeneration();
+    treasureWidgetPruneObsolete(referenceNow);
+  }
   const hadRenderedCache = cacheEnabled && treasureWidgetHasRenderedCache(res, family, referenceNow);
   let prewarm = { generated: false, remaining: 0 };
   if (hadRenderedCache) {

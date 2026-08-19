@@ -41,23 +41,35 @@ async function skyCandleLoadRuntime() {
 function skyCandlePatchRuntime(source) {
   let s = String(source || "");
   const renderMarker = "function renderWidgetImageWithDate(image, family, dateText) {";
-  const helper = `function getTreasureWidgetLocalDateParts(reference = new Date()) {
+  const helper = `function getTreasureWidgetLocalDateContext(reference = new Date()) {
   const d = reference instanceof Date ? reference : new Date(reference);
   const common = readSkyCommonSettingsSafe();
   if (common && common.timezone && common.timezone.mode === "manual") {
     const offsetHours = Number(common.timezone.utcOffsetHours);
     if (Number.isFinite(offsetHours)) {
-      const shifted = new Date(d.getTime() + offsetHours * 60 * 60 * 1000);
-      return { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1, day: shifted.getUTCDate() };
+      const offsetMinutes = offsetHours * 60;
+      const shifted = new Date(d.getTime() + offsetMinutes * 60 * 1000);
+      return { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1, day: shifted.getUTCDate(), offsetMinutes };
     }
   }
-  return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+  return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(), offsetMinutes: -d.getTimezoneOffset() };
 }
 function formatTreasureWidgetDateText(reference, skyYMD) {
-  const local = getTreasureWidgetLocalDateParts(reference);
+  const local = getTreasureWidgetLocalDateContext(reference);
   const localKey = String(local.year).padStart(4, "0") + "-" + String(local.month).padStart(2, "0") + "-" + String(local.day).padStart(2, "0");
   const skyKey = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(skyYMD || "")) ? String(skyYMD) : localKey;
-  const phase = localKey > skyKey ? "更新前" : "更新後";
+  let laOffsetMinutes = Number(local.offsetMinutes);
+  try {
+    const laInfo = getLaOffsetInfo(reference);
+    const n = Number(laInfo && laInfo.offsetMinutes);
+    if (Number.isFinite(n)) laOffsetMinutes = n;
+  } catch (_) {}
+  let phase = "更新後";
+  if (Number(local.offsetMinutes) > laOffsetMinutes) {
+    phase = localKey > skyKey ? "更新前" : "更新後";
+  } else if (Number(local.offsetMinutes) < laOffsetMinutes) {
+    phase = localKey < skyKey ? "更新後" : "更新前";
+  }
   return String(local.month) + "月" + String(local.day) + "日　" + phase;
 }
 `;

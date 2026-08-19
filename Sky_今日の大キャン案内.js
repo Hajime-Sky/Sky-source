@@ -205,7 +205,8 @@ function treasureWidgetPrewarmOne(reference, currentFamily) {
   const candidates = [
     treasureWidgetNextLocalMidnight(now),
     treasureWidgetNextLaUpdate(now)
-  ].filter(d => d instanceof Date && Number.isFinite(d.getTime()) && d.getTime() > now.getTime());
+  ].filter(d => d instanceof Date && Number.isFinite(d.getTime()) && d.getTime() > now.getTime())
+    .sort((a, b) => a.getTime() - b.getTime());
   const families = Array.from(new Set([String(currentFamily || "medium"), "small", "medium", "large"]));
   for (const future of candidates) {
     const res = calcForCurrentLATime(future);
@@ -262,8 +263,8 @@ function treasureWidgetPrewarmOne(reference, currentFamily) {
 
   const replacements = [
     [
-      "async function previewTodayImage() {\\n  const res = calcForCurrentLATime();",
-      "async function previewTodayImage() {\\n  const referenceNow = getSkyCommonNow();\\n  const res = calcForCurrentLATime(referenceNow);"
+      "async function previewTodayImage() {\n  const res = calcForCurrentLATime();",
+      "async function previewTodayImage() {\n  const referenceNow = getSkyCommonNow();\n  const res = calcForCurrentLATime(referenceNow);"
     ],
     [
       'const composed = renderWidgetImageWithDate(image, "large", res.skyYMD);',
@@ -308,7 +309,7 @@ async function skyCandleShowLoaderError(error) {
 
 try {
   const runtime = skyCandlePatchRuntime(await skyCandleLoadRuntime());
-  await eval(`(async()=>{\\n${runtime}\\n})()`);
+  await eval(`(async()=>{\n${runtime}\n})()`);
 } catch (error) {
   await skyCandleShowLoaderError(error);
 }

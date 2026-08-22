@@ -79,6 +79,24 @@ function copyDirectoryContentsIfMissing(fm, srcDir, dstDir, result) {
   }
 }
 
+function directoryContentsFullyPresent(fm, srcDir, dstDir) {
+  try {
+    if (!fm.fileExists(srcDir) || !fm.fileExists(dstDir)) return false;
+    for (const name of fm.listContents(srcDir)) {
+      const src = fm.joinPath(srcDir, name);
+      const dst = fm.joinPath(dstDir, name);
+      if (!fm.fileExists(dst)) return false;
+      if (fm.isDirectory && fm.isDirectory(src)) {
+        if (!(fm.isDirectory && fm.isDirectory(dst))) return false;
+        if (!directoryContentsFullyPresent(fm, src, dst)) return false;
+      }
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function migrateLegacyStorageFolder() {
   const result = { copied: 0, skipped: 0, removedLegacyDir: false, errors: [] };
   try {
@@ -87,11 +105,13 @@ function migrateLegacyStorageFolder() {
     const targetDir = getStorageDir(fm);
     if (!fm.fileExists(legacyDir) || legacyDir === targetDir) return result;
     copyDirectoryContentsIfMissing(fm, legacyDir, targetDir, result);
-    try {
-      fm.remove(legacyDir);
-      result.removedLegacyDir = true;
-    } catch (e) {
-      result.errors.push(`remove:${String(e || "")}`);
+    if (result.errors.length === 0 && directoryContentsFullyPresent(fm, legacyDir, targetDir)) {
+      try {
+        fm.remove(legacyDir);
+        result.removedLegacyDir = true;
+      } catch (e) {
+        result.errors.push(`remove:${String(e || "")}`);
+      }
     }
   } catch (e) {
     result.errors.push(String(e || ""));
@@ -108,11 +128,13 @@ function migratePreviousUnifiedStorageFolder() {
     const targetDir = getStorageDir(fm);
     if (!fm.fileExists(previousDir) || previousDir === targetDir) return result;
     copyDirectoryContentsIfMissing(fm, previousDir, targetDir, result);
-    try {
-      fm.remove(previousDir);
-      result.removedLegacyDir = true;
-    } catch (e) {
-      result.errors.push(`remove:${String(e || "")}`);
+    if (result.errors.length === 0 && directoryContentsFullyPresent(fm, previousDir, targetDir)) {
+      try {
+        fm.remove(previousDir);
+        result.removedLegacyDir = true;
+      } catch (e) {
+        result.errors.push(`remove:${String(e || "")}`);
+      }
     }
   } catch (e) {
     result.errors.push(String(e || ""));

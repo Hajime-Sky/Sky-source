@@ -6,8 +6,8 @@
     "sha256": "b0bf3009de50751eb020d0bd7192e6cda8fc0df9be88ca0f779b4b12fc0c97dd",
     "url": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/Sky_%E6%98%9F%E3%81%AE%E5%AD%90%E3%83%AA%E3%83%9E%E3%82%A4%E3%83%B3%E3%83%80%E3%83%BC.js"
   },
-  "sourceVersion": "v2.30_widget_cache_generation",
-  "generatedAt": "2026-08-19T05:45:00Z",
+  "sourceVersion": "v2.31_storage_safety",
+  "generatedAt": "2026-08-22T05:50:00Z",
   "update": {
     "remoteManifestUrl": "https://raw.githubusercontent.com/Hajime-Sky/Sky-source/main/SkyReminderModules/manifest.json",
     "enabled": true,
@@ -29,6 +29,13 @@
       "role": "Notification id helpers, default settings, normalization, keychain store, cache, and settings persistence.",
       "sourceLines": "230-936",
       "sha256": "31f28cdf72e27e80019fed1a8c65e04de2daf6d399f4e5e86825bedbfeb54b38",
+      "url": ""
+    },
+    {
+      "file": "002a_storage_safety.js",
+      "role": "Pre-download file-backed state from iCloud and keep legacy cleanup migration-safe.",
+      "sourceLines": "new",
+      "sha256": "195684c74c9b17d432edf7722933b053d0397d7c28155221e335e13be7ea72fe",
       "url": ""
     },
     {
@@ -136,7 +143,7 @@
       "file": "009_storage_migrations.js",
       "role": "One-time migration from legacy Keychain/local image storage to unified file storage.",
       "sourceLines": "new",
-      "sha256": "f779b4697fc66bcf7808a2a6e7d379a6b1fa9054418a35f04199bf762265a052",
+      "sha256": "6888723591c27a75995140dc754afbced86dc24190cb8b6a51655b85434d23ab",
       "url": ""
     },
     {
@@ -144,7 +151,7 @@
       "file": "009_storage_migrations.js",
       "role": "One-time migration from separate SkyReminderData/SkyReminderModules or Scriptable/SkyReminder folders into Scriptable/HajimeSkyTools/star-reminder.",
       "sourceLines": "new",
-      "sha256": "f779b4697fc66bcf7808a2a6e7d379a6b1fa9054418a35f04199bf762265a052",
+      "sha256": "6888723591c27a75995140dc754afbced86dc24190cb8b6a51655b85434d23ab",
       "url": ""
     },
     {
@@ -152,7 +159,15 @@
       "file": "009_storage_migrations.js",
       "role": "One-time migration from Scriptable/SkyReminder into the shared Scriptable/HajimeSkyTools folder.",
       "sourceLines": "new",
-      "sha256": "f779b4697fc66bcf7808a2a6e7d379a6b1fa9054418a35f04199bf762265a052",
+      "sha256": "6888723591c27a75995140dc754afbced86dc24190cb8b6a51655b85434d23ab",
+      "url": ""
+    },
+    {
+      "id": "2026-08-22-verify-storage-v2",
+      "file": "009_storage_migrations.js",
+      "role": "Re-verify legacy storage copy completeness before deleting any old folder.",
+      "sourceLines": "new",
+      "sha256": "6888723591c27a75995140dc754afbced86dc24190cb8b6a51655b85434d23ab",
       "url": ""
     }
   ]

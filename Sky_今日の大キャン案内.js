@@ -41,7 +41,7 @@ async function skyCandleLoadRuntime() {
 function skyCandlePatchRuntime(source) {
   let s = String(source || "");
   const renderMarker = "function renderWidgetImageWithDate(image, family, dateText) {";
-  const helper = `const SKY_CANDLE_WIDGET_RENDER_CACHE_REV = "2026-08-19-v4";
+  const helper = `const SKY_CANDLE_WIDGET_RENDER_CACHE_REV = "2026-08-22-v5";
 function getTreasureWidgetLocalDateContext(reference = new Date()) {
   const d = reference instanceof Date ? reference : new Date(reference);
   const common = readSkyCommonSettingsSafe();
@@ -214,8 +214,21 @@ function treasureWidgetWriteRenderedCache(res, family, reference, image) {
     return d.fm.fileExists(d.path);
   } catch (_) { return false; }
 }
-function treasureWidgetRenderCurrent(res, family, reference) {
-  let image = getCachedImage(res.pattern.label);
+async function treasureWidgetLoadSourceImage(label) {
+  try {
+    const fm = getICloudFileManager();
+    const path = getImagePath(label);
+    if (!fm.fileExists(path)) return null;
+    if (typeof fm.isFileDownloaded === "function" && !fm.isFileDownloaded(path)) {
+      await fm.downloadFileFromiCloud(path);
+    }
+    return fm.readImage(path);
+  } catch (_) {
+    return null;
+  }
+}
+async function treasureWidgetRenderCurrent(res, family, reference) {
+  let image = await treasureWidgetLoadSourceImage(res.pattern.label);
   if (!image) return null;
   const rendered = renderWidgetImageWithDate(image, family, formatTreasureWidgetDateText(reference, res.skyYMD));
   image = null;
@@ -293,11 +306,11 @@ function treasureWidgetPendingPrewarms(reference, currentFamily) {
   }
   return pending;
 }
-function treasureWidgetPrewarmOne(reference, currentFamily) {
+async function treasureWidgetPrewarmOne(reference, currentFamily) {
   const pending = treasureWidgetPendingPrewarms(reference, currentFamily);
   if (!pending.length) return { generated: false, remaining: 0 };
   const task = pending[0];
-  let rendered = treasureWidgetRenderCurrent(task.res, task.family, task.future);
+  let rendered = await treasureWidgetRenderCurrent(task.res, task.family, task.future);
   const generated = !!rendered;
   rendered = null;
   return { generated, remaining: generated ? Math.max(0, pending.length - 1) : pending.length };
@@ -327,12 +340,12 @@ function treasureWidgetPrewarmOne(reference, currentFamily) {
   const hadRenderedCache = cacheEnabled && treasureWidgetHasRenderedCache(res, family, referenceNow);
   let prewarm = { generated: false, remaining: 0 };
   if (hadRenderedCache) {
-    try { prewarm = treasureWidgetPrewarmOne(referenceNow, family); } catch (_) {}
+    try { prewarm = await treasureWidgetPrewarmOne(referenceNow, family); } catch (_) {}
   }
   let bgImage = hadRenderedCache ? await treasureWidgetReadRenderedCache(res, family, referenceNow) : null;
   let generatedCurrent = false;
   if (!bgImage) {
-    bgImage = treasureWidgetRenderCurrent(res, family, referenceNow);
+    bgImage = await treasureWidgetRenderCurrent(res, family, referenceNow);
     generatedCurrent = true;
     if (!bgImage) return showErrorWidget("画像を表示できません", res.pattern.label);
   }
